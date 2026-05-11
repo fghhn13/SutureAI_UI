@@ -1,0 +1,192 @@
+{
+  "evidencePreviewUrl": "/picture/微信图片_20260421160900_112_99.png",
+  "productName": "SutureAI",
+  "reportTitle": "Training Report",
+  "task": "Simple Suturing Practice",
+  "student": "Jason Li",
+  "dateTime": "Apr 21, 2026 · 14:30",
+  "status": "Pending Instructor Review",
+  "overallScore": 74,
+  "reliability": "Medium Confidence",
+  "completed": true,
+  "duration": "1m 42s",
+  "delta": "+6",
+  "summary": "Good procedural flow, but needle insertion stability needs improvement.",
+  "dimensions": [
+    {
+      "name": "Efficiency",
+      "score": 78,
+      "explanation": "Duration and motion efficiency are above baseline.",
+      "metrics": "duration, path length, idle ratio"
+    },
+    {
+      "name": "Accuracy",
+      "score": 65,
+      "explanation": "Insertion precision varied during mid-task attempts.",
+      "metrics": "entry/exit deviation, stitch spacing"
+    },
+    {
+      "name": "Procedural Flow",
+      "score": 84,
+      "explanation": "Step order and completion quality are strong.",
+      "metrics": "step completeness, step order, rework count"
+    },
+    {
+      "name": "Safety",
+      "score": 72,
+      "explanation": "No critical incidents, but repeated attempts occurred.",
+      "metrics": "needle drop, tool out of region, repeated attempts"
+    },
+    {
+      "name": "Product Quality",
+      "score": 68,
+      "explanation": "Knot and stitch consistency need additional practice.",
+      "metrics": "stitch consistency, knot quality proxy"
+    }
+  ],
+  "timeline": [
+    {
+      "id": "t1",
+      "time": "00:12",
+      "title": "Needle pickup completed",
+      "type": "normal",
+      "detail": "Needle grasp stabilized within expected angle range and handover completed without interruption.",
+      "clip": true
+    },
+    {
+      "id": "t2",
+      "time": "00:33",
+      "title": "Proper needle positioning detected",
+      "type": "normal",
+      "detail": "Needle tip orientation aligned with target tissue entry zone and maintained for >1.2s.",
+      "clip": false
+    },
+    {
+      "id": "t3",
+      "time": "00:47",
+      "title": "Long pause detected",
+      "type": "warning",
+      "detail": "Idle duration exceeded cohort benchmark by 2.1 seconds before insertion initiation.",
+      "clip": true
+    },
+    {
+      "id": "t4",
+      "time": "01:05",
+      "title": "Repeated insertion attempt",
+      "type": "error",
+      "detail": "Two readjustments were detected before successful penetration, reducing insertion precision.",
+      "clip": true
+    },
+    {
+      "id": "t5",
+      "time": "01:18",
+      "title": "Knotting started",
+      "type": "normal",
+      "detail": "Transition into knotting phase was smooth with acceptable tool-to-tool trajectory continuity.",
+      "clip": false
+    },
+    {
+      "id": "t6",
+      "time": "01:40",
+      "title": "Task completed",
+      "type": "normal",
+      "detail": "Full step sequence completed and terminal knot achieved within target task duration.",
+      "clip": true
+    }
+  ],
+  "clips": [
+    {
+      "id": "c1",
+      "time": "00:47",
+      "type": "Warning",
+      "label": "Pause Before Insertion",
+      "description": "Review the prolonged hesitation right before needle penetration."
+    },
+    {
+      "id": "c2",
+      "time": "01:05",
+      "type": "Error",
+      "label": "Repeated Insertion Attempt",
+      "description": "Observe two readjustments that lowered insertion consistency."
+    },
+    {
+      "id": "c3",
+      "time": "01:18",
+      "type": "Step",
+      "label": "Knotting Transition",
+      "description": "Strong hand transition with continuous motion into knotting."
+    },
+    {
+      "id": "c4",
+      "time": "01:40",
+      "type": "Step",
+      "label": "Completion Segment",
+      "description": "Final segment showing completion quality and task closure."
+    }
+  ],
+  "strengths": [
+    "Procedural steps were completed in the correct order.",
+    "Good overall task continuity during knotting.",
+    "Needle handling remained controlled during initial pickup."
+  ],
+  "weaknesses": [
+    "Needle insertion accuracy was unstable across repeated attempts.",
+    "One prolonged pause affected efficiency score.",
+    "Stitch consistency decreased slightly in the latter half."
+  ],
+  "suggestions": [
+    "Repeat needle positioning drills before full suturing runs.",
+    "Practice smoother insertion with fewer readjustments.",
+    "Focus on reducing hesitation before penetration."
+  ],
+  "assessmentHighlights": {
+    "strongestDimension": "Procedural Flow",
+    "mainIssue": "Repeated insertion attempts reduced insertion stability.",
+    "practiceFocus": "Needle insertion consistency",
+    "evidenceClipCount": 4,
+    "reviewStatus": "Pending instructor review"
+  },
+  "aiFeedback": [
+    "Based on current institutional training benchmarks, the student's procedural flow is within expected range.",
+    "Insertion precision remains below the target consistency level for this training stage.",
+    "Pause duration before penetration exceeded the cohort median."
+  ],
+  "instructorEvaluation": {
+    "instructorName": "Dr. Chen",
+    "evaluationStatus": "Awaiting final confirmation",
+    "comment": "",
+    "finalScore": ""
+  },
+  "instructorReview": {
+    "reviewStatus": "In Progress",
+    "aiSuggestedScore": 74,
+    "finalConfirmedScore": 72,
+    "adjustedScore": -2,
+    "alignmentWithAi": "Partially adjust",
+    "teacherComment": "The procedural flow is good overall, but insertion control should be weighted more heavily in this case.",
+    "teachingFocus": [
+      "insertion control",
+      "repeated attempts",
+      "smoother transition into knotting"
+    ]
+  },
+  "studentObjection": {
+    "submitted": true,
+    "resolutionStatus": "Pending",
+    "concernText": "I believe the repeated insertion event at 01:05 may have been overcounted because my hand briefly blocked the needle tip.",
+    "referencedClip": "01:05 - Repeated Insertion Attempt",
+    "teacherResponse": "The system likely captured a real readjustment event, but I agree the visual confidence was reduced by occlusion. I have partially adjusted the final score accordingly."
+  },
+  "studentResponse": {
+    "helperText": "The student may raise concerns if they believe a certain segment was misinterpreted.",
+    "acceptLabel": "Accept Feedback",
+    "clarifyLabel": "Request Clarification"
+  },
+  "personalNote": "I felt less stable during insertion after the first knotting transition. I should practice positioning before starting full runs.",
+  "uncertainty": [
+    "Hand tracking confidence was moderate due to brief occlusion.",
+    "Accuracy-related metrics should be interpreted with caution."
+  ],
+  "instructorNote": "Good baseline flow. Needs more consistency in insertion control.",
+  "reviewStatus": "Awaiting instructor confirmation"
+}

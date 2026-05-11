@@ -1,0 +1,284 @@
+{
+  "evidencePreviewUrl": "/picture/微信图片_20260421160900_112_99.png",
+  "evidenceVideoUrl": "/video/suture_1.mp4",
+  "productName": "SutureAI",
+  "reportTitle": "Training Report",
+  "task": "Needle threading & knot tying (demo)",
+  "student": "Demo Student",
+  "dateTime": "Feb 10, 2026 · 09:20",
+  "status": "Pending Instructor Review",
+  "overallScore": 66,
+  "reliability": "Medium Confidence",
+  "completed": false,
+  "duration": "~2 min (includes interrupted segment)",
+  "delta": "+3",
+  "summary": "Needle handling is still developing (noticeable hand tremor and uneven motion). There was a brief wrong-tool pick, later corrected. The second segment ends with a recording interruption before threading could be completed.",
+  "dimensions": [
+    {
+      "name": "Efficiency",
+      "score": 62,
+      "explanation": "Pauses and repeated attempts reduce pace versus cohort norms.",
+      "metrics": "duration, idle, rework"
+    },
+    {
+      "name": "Accuracy",
+      "score": 64,
+      "explanation": "Threading succeeded on the second attempt; micro-adjustments were unstable.",
+      "metrics": "attempt count, path deviation"
+    },
+    {
+      "name": "Procedural Flow",
+      "score": 68,
+      "explanation": "Knot sequence completed, but initial tool selection was incorrect.",
+      "metrics": "step order, tool correctness"
+    },
+    {
+      "name": "Safety",
+      "score": 72,
+      "explanation": "No high-risk behaviour observed; tool mix-up was corrected quickly.",
+      "metrics": "tool mismatch recovery"
+    },
+    {
+      "name": "Product Quality",
+      "score": 64,
+      "explanation": "Knot quality acceptable; threading phase showed higher variance.",
+      "metrics": "knot consistency, needle success"
+    }
+  ],
+  "timeline": [
+    {
+      "id": "v1",
+      "time": "0:02",
+      "timeSeconds": 2,
+      "title": "Task start detected",
+      "type": "normal",
+      "detail": "Session onset marker.",
+      "clip": true
+    },
+    {
+      "id": "v2",
+      "time": "0:03",
+      "timeSeconds": 3,
+      "title": "Wrong tool in left hand",
+      "type": "error",
+      "detail": "Observed tool: scissors. Expected tool: forceps.",
+      "clip": true
+    },
+    {
+      "id": "v3",
+      "time": "0:05",
+      "timeSeconds": 5,
+      "title": "Switched to correct tool",
+      "type": "normal",
+      "detail": "Forceps selected; task continues.",
+      "clip": true
+    },
+    {
+      "id": "v4",
+      "time": "0:17",
+      "timeSeconds": 17,
+      "title": "First threading attempt",
+      "type": "normal",
+      "detail": "",
+      "clip": true
+    },
+    {
+      "id": "v5",
+      "time": "0:26",
+      "timeSeconds": 26,
+      "title": "Threading failed",
+      "type": "warning",
+      "detail": "First pass unsuccessful; preparing second attempt.",
+      "clip": true
+    },
+    {
+      "id": "v6",
+      "time": "0:27",
+      "timeSeconds": 27,
+      "title": "Second threading attempt",
+      "type": "normal",
+      "detail": "",
+      "clip": true
+    },
+    {
+      "id": "v7",
+      "time": "0:35",
+      "timeSeconds": 35,
+      "title": "Threading succeeded",
+      "type": "normal",
+      "detail": "",
+      "clip": true
+    },
+    {
+      "id": "v8",
+      "time": "0:45",
+      "timeSeconds": 45,
+      "title": "Knotting started",
+      "type": "normal",
+      "detail": "",
+      "clip": true
+    },
+    {
+      "id": "v9",
+      "time": "0:53",
+      "timeSeconds": 53,
+      "title": "First knot throw completed",
+      "type": "normal",
+      "detail": "",
+      "clip": false
+    },
+    {
+      "id": "v10",
+      "time": "0:58",
+      "timeSeconds": 58,
+      "title": "Second knot throw completed",
+      "type": "normal",
+      "detail": "",
+      "clip": false
+    },
+    {
+      "id": "v11",
+      "time": "1:02",
+      "timeSeconds": 62,
+      "title": "Third knot throw completed",
+      "type": "normal",
+      "detail": "",
+      "clip": false
+    },
+    {
+      "id": "v12",
+      "time": "1:13",
+      "timeSeconds": 73,
+      "title": "Segment 1 complete",
+      "type": "normal",
+      "detail": "End of first practice segment.",
+      "clip": true
+    },
+    {
+      "id": "v13",
+      "time": "1:23",
+      "timeSeconds": 83,
+      "title": "Task start – segment 2",
+      "type": "normal",
+      "detail": "Second segment baseline.",
+      "clip": true
+    },
+    {
+      "id": "v14",
+      "time": "1:36",
+      "timeSeconds": 96,
+      "title": "First threading attempt (segment 2)",
+      "type": "normal",
+      "detail": "",
+      "clip": true
+    },
+    {
+      "id": "v15",
+      "time": "1:54",
+      "timeSeconds": 114,
+      "title": "Recording interrupted",
+      "type": "error",
+      "detail": "Status: threading not completed. Recording stops here.",
+      "clip": true
+    }
+  ],
+  "clips": [
+    {
+      "id": "cv1",
+      "time": "0:03",
+      "timeSeconds": 3,
+      "type": "Error",
+      "label": "Wrong tool",
+      "description": "Scissors vs forceps; corrected shortly after."
+    },
+    {
+      "id": "cv2",
+      "time": "0:26",
+      "timeSeconds": 26,
+      "type": "Warning",
+      "label": "Threading failed",
+      "description": "First pass did not complete."
+    },
+    {
+      "id": "cv3",
+      "time": "0:35",
+      "timeSeconds": 35,
+      "type": "Step",
+      "label": "Threading success",
+      "description": "Succeeded on the second attempt."
+    },
+    {
+      "id": "cv4",
+      "time": "1:13",
+      "timeSeconds": 73,
+      "type": "Step",
+      "label": "Segment 1 done",
+      "description": "Knotting finished; first segment closed."
+    },
+    {
+      "id": "cv5",
+      "time": "1:54",
+      "timeSeconds": 114,
+      "type": "Error",
+      "label": "Interrupted recording",
+      "description": "Threading incomplete; demo clip ends at this timestamp."
+    }
+  ],
+  "strengths": [
+    "Quick recovery after the wrong-tool episode.",
+    "Relatively stable pacing before threading in segment 2."
+  ],
+  "weaknesses": [
+    "Threading required two attempts; hand stability still limited.",
+    "Segment 2 interrupted—full sequence cannot be reviewed."
+  ],
+  "suggestions": [
+    "Drill needle entry angle and fixation points to reduce tremor.",
+    "Record segment 2 end-to-end for complete review."
+  ],
+  "assessmentHighlights": {
+    "strongestDimension": "Safety",
+    "mainIssue": "Threading proficiency and recording continuity",
+    "practiceFocus": "Stable threading and uninterrupted capture",
+    "evidenceClipCount": 5,
+    "reviewStatus": "Pending instructor review"
+  },
+  "aiFeedback": [
+    "Overall score 66/100: motion smoothness and threading success rate are below stage targets.",
+    "Tool confusion was brief and corrected promptly.",
+    "Segment-2 interruption limits evidence for the latter half."
+  ],
+  "instructorEvaluation": {
+    "instructorName": "Dr. Chen",
+    "evaluationStatus": "Awaiting final confirmation",
+    "comment": "",
+    "finalScore": ""
+  },
+  "instructorReview": {
+    "reviewStatus": "In Progress",
+    "aiSuggestedScore": 66,
+    "finalConfirmedScore": 66,
+    "adjustedScore": 0,
+    "alignmentWithAi": "Fully agree",
+    "teacherComment": "",
+    "teachingFocus": ["needle handling", "recording continuity"]
+  },
+  "studentObjection": {
+    "submitted": false,
+    "resolutionStatus": "Closed",
+    "concernText": "",
+    "referencedClip": "",
+    "teacherResponse": ""
+  },
+  "studentResponse": {
+    "helperText": "The student may raise concerns if they believe a certain segment was misinterpreted.",
+    "acceptLabel": "Accept Feedback",
+    "clarifyLabel": "Request Clarification"
+  },
+  "personalNote": "",
+  "uncertainty": [
+    "After the segment-2 interruption there is no further footage; scoring relies mainly on segment 1 and pre-cutoff segment 2."
+  ],
+  "instructorNote": "",
+  "reviewStatus": "Awaiting instructor confirmation"
+}

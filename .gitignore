@@ -30,3 +30,25 @@ Thumbs.db
 
 # Test / coverage (if added later)
 coverage/
+
+# --- Large / binary media (do not commit; add locally after clone — see README) ---
+*.mp4
+*.mov
+*.webm
+*.mkv
+
+# Runtime-served assets under public/ (reports reference /picture/… and /video/…)
+public/video/*
+!public/video/.gitkeep
+
+public/picture/*
+!public/picture/.gitkeep
+!public/picture/avatar-placeholder.svg
+
+# Legacy duplicate asset folders at repository root (use public/ only)
+/picture/
+/video/
+
+# Local data at repo root only (does not affect src/data/)
+/data/*
+!/data/.gitkeep

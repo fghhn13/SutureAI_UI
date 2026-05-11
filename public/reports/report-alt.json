@@ -1,0 +1,171 @@
+{
+  "evidencePreviewUrl": "/picture/微信图片_20260421160900_112_99.png",
+  "productName": "SutureAI",
+  "reportTitle": "Training Report",
+  "task": "Knot Tying Practice",
+  "student": "Maya Wong",
+  "dateTime": "May 2, 2026 · 10:15",
+  "status": "Reviewed",
+  "overallScore": 81,
+  "reliability": "High Confidence",
+  "completed": true,
+  "duration": "2m 05s",
+  "delta": "+11",
+  "summary": "Strong knot security and steady pacing; minor idle time early in the run.",
+  "dimensions": [
+    {
+      "name": "Efficiency",
+      "score": 82,
+      "explanation": "Motion economy improved versus prior sessions.",
+      "metrics": "duration, path length, idle ratio"
+    },
+    {
+      "name": "Accuracy",
+      "score": 79,
+      "explanation": "Tension placement remained consistent across repetitions.",
+      "metrics": "entry/exit deviation, stitch spacing"
+    },
+    {
+      "name": "Procedural Flow",
+      "score": 85,
+      "explanation": "Clear sequencing from wrap to seat without skipped micro-steps.",
+      "metrics": "step completeness, step order, rework count"
+    },
+    {
+      "name": "Safety",
+      "score": 80,
+      "explanation": "Tool handling stayed within safe envelope throughout.",
+      "metrics": "needle drop, tool out of region, repeated attempts"
+    },
+    {
+      "name": "Product Quality",
+      "score": 79,
+      "explanation": "Knot bulk and symmetry within cohort norms.",
+      "metrics": "stitch consistency, knot quality proxy"
+    }
+  ],
+  "timeline": [
+    {
+      "id": "m1",
+      "time": "00:08",
+      "title": "Instrument grasp stabilized",
+      "type": "normal",
+      "detail": "Grip pose matched training baseline before first wrap.",
+      "clip": false
+    },
+    {
+      "id": "m2",
+      "time": "00:35",
+      "title": "Minor idle before second wrap",
+      "type": "warning",
+      "detail": "Brief hesitation exceeded cohort median by 0.8s.",
+      "clip": true
+    },
+    {
+      "id": "m3",
+      "time": "00:52",
+      "title": "Wrap trajectory deviation",
+      "type": "error",
+      "detail": "First wrap arc drifted 6° outside preferred cone; corrected on retry.",
+      "clip": true
+    },
+    {
+      "id": "m4",
+      "time": "01:28",
+      "title": "Knot seated successfully",
+      "type": "normal",
+      "detail": "Final seating force profile matched reference exemplar.",
+      "clip": true
+    },
+    {
+      "id": "m5",
+      "time": "02:03",
+      "title": "Task completed",
+      "type": "normal",
+      "detail": "Completion checklist satisfied within allowed duration.",
+      "clip": false
+    }
+  ],
+  "clips": [
+    {
+      "id": "mc1",
+      "time": "00:35",
+      "type": "Warning",
+      "label": "Idle Before Wrap",
+      "description": "Short pause worth reviewing against pacing goals."
+    },
+    {
+      "id": "mc2",
+      "time": "00:52",
+      "type": "Error",
+      "label": "Wrap Correction",
+      "description": "Shows correction trajectory after initial drift."
+    },
+    {
+      "id": "mc3",
+      "time": "01:28",
+      "type": "Step",
+      "label": "Successful Seat",
+      "description": "Clean seating motion for instructor sign-off."
+    }
+  ],
+  "strengths": [
+    "Consistent rhythm after the first minute.",
+    "Low rework count relative to prior cohort median.",
+    "Clear completion signal at final knot seat."
+  ],
+  "weaknesses": [
+    "Early-session idle slightly elevated.",
+    "One wrap needed trajectory correction."
+  ],
+  "suggestions": [
+    "Warm up with two dry wraps before timed runs.",
+    "Practice micro-pauses under 0.5s between instrument exchanges."
+  ],
+  "assessmentHighlights": {
+    "strongestDimension": "Procedural Flow",
+    "mainIssue": "Early idle segment before second instrument exchange.",
+    "practiceFocus": "Pacing under mild time pressure",
+    "evidenceClipCount": 3,
+    "reviewStatus": "Instructor confirmed"
+  },
+  "aiFeedback": [
+    "Overall performance sits above the cohort median for this knot-tying module.",
+    "The single wrap deviation was corrected quickly without cascade errors.",
+    "Idle metrics improved after the first third of the recording."
+  ],
+  "instructorEvaluation": {
+    "instructorName": "Dr. Patel",
+    "evaluationStatus": "Confirmed",
+    "comment": "Solid improvement; keep emphasis on first-minute pacing.",
+    "finalScore": "81"
+  },
+  "instructorReview": {
+    "reviewStatus": "Complete",
+    "aiSuggestedScore": 79,
+    "finalConfirmedScore": 81,
+    "adjustedScore": 2,
+    "alignmentWithAi": "Partially adjust",
+    "teacherComment": "Rewarded recovery speed after the wrap correction; AI slightly underweighted proactive correction.",
+    "teachingFocus": ["pacing", "wrap cone stability", "recovery protocol"]
+  },
+  "studentObjection": {
+    "submitted": false,
+    "resolutionStatus": "Closed",
+    "concernText": "",
+    "referencedClip": "",
+    "teacherResponse": ""
+  },
+  "studentResponse": {
+    "helperText": "The student may raise concerns if they believe a certain segment was misinterpreted.",
+    "acceptLabel": "Accept Feedback",
+    "clarifyLabel": "Request Clarification"
+  },
+  "personalNote": "",
+  "uncertainty": [
+    "Camera angle reduced visibility on the far wrap shoulder for ~0.4s.",
+    "Efficiency score should be read alongside corrected idle baseline."
+  ],
+  "instructorNote": "Approved for progression to next module.",
+  "reviewStatus": "Confirmed"
+}
