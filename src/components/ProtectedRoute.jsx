@@ -1,7 +1,13 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { homePathFor } from "../auth/demoAccounts.js";
 
-export default function ProtectedRoute() {
+/**
+ * Requires sign-in; with `roles`, also requires one of those roles (others are sent to
+ * their own home page).
+ * @param {{ roles?: string[] }} props
+ */
+export default function ProtectedRoute({ roles }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -11,6 +17,10 @@ export default function ProtectedRoute() {
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to={homePathFor(user)} replace />;
   }
 
   return <Outlet />;

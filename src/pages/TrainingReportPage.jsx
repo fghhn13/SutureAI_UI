@@ -2,6 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, apiUrl } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import {
+  ClarificationPanel,
+  InstructorReviewPanel,
+  PersonalNoteCard,
+  ReviewResultCard,
+  StudentResponseCard,
+} from "../components/report/ReviewPanels.jsx";
 
 function publicAssetUrl(path) {
   const base = import.meta.env.BASE_URL.endsWith("/")
@@ -55,8 +62,16 @@ function seekSecondsFromClip(clip) {
 }
 
 function StatusBadge({ status }) {
+  const reviewed = status === "Reviewed";
   return (
-    <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+    <span
+      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+        reviewed
+          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+          : "border-amber-300 bg-amber-50 text-amber-700"
+      }`}
+    >
+      {reviewed ? "✓ " : ""}
       {status}
     </span>
   );
@@ -342,11 +357,7 @@ function AssessmentHighlightsCard({ highlights }) {
   );
 }
 
-function StudentReportFeedbackReflectionSection({ data }) {
-  const isInstructorPending = data.instructorEvaluation.evaluationStatus
-    .toLowerCase()
-    .includes("awaiting");
-
+function StudentReportFeedbackReflectionSection({ data, onUpdated }) {
   return (
     <section className="mt-6 surface-card surface-card-lift p-6">
       <h2 className="text-lg font-semibold text-slate-900">Report Feedback & Reflection</h2>
@@ -407,213 +418,20 @@ function StudentReportFeedbackReflectionSection({ data }) {
         </article>
 
         <div className="space-y-4 lg:col-span-1">
-          <article className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">
-              Instructor Evaluation
-            </h3>
-            <div className="mt-3 space-y-2 text-sm text-slate-700">
-              <p>
-                <span className="font-medium text-slate-900">Instructor: </span>
-                {data.instructorEvaluation.instructorName}
-              </p>
-              <p>
-                <span className="font-medium text-slate-900">Status: </span>
-                {data.instructorEvaluation.evaluationStatus}
-              </p>
-              <p>
-                <span className="font-medium text-slate-900">Final Score: </span>
-                {data.instructorEvaluation.finalScore || (
-                  <span className="italic text-slate-400">Pending confirmation</span>
-                )}
-              </p>
-            </div>
-            <label className="mt-4 block text-sm font-medium text-slate-700">Comment</label>
-            <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm leading-6">
-              {isInstructorPending || !data.instructorEvaluation.comment ? (
-                <span className="italic text-slate-400">
-                  Awaiting instructor comment after final review confirmation.
-                </span>
-              ) : (
-                <span className="text-slate-700">{data.instructorEvaluation.comment}</span>
-              )}
-            </div>
-          </article>
-
-          <article className="rounded-xl border border-slate-200 bg-slate-50/80 p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
-              Student Response
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{data.studentResponse.helperText}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
-                {data.studentResponse.acceptLabel}
-              </button>
-              <button className="rounded-md border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">
-                {data.studentResponse.clarifyLabel}
-              </button>
-            </div>
-          </article>
-
-          <article className="rounded-xl border border-slate-200 bg-slate-50/80 p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
-              Personal Note
-            </h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Optional personal reflection saved with this report.
-            </p>
-            <textarea
-              className="mt-3 h-32 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-brand-200 focus:ring"
-              defaultValue={data.personalNote}
-              placeholder="Write your reflection here..."
-            />
-          </article>
+          <ReviewResultCard review={data.review} />
+          {data.meta.canRespond ? (
+            <>
+              <StudentResponseCard report={data} onUpdated={onUpdated} />
+              <PersonalNoteCard report={data} onUpdated={onUpdated} />
+            </>
+          ) : null}
         </div>
       </div>
     </section>
   );
 }
 
-function InstructorReviewResolutionSection({ data }) {
-  return (
-    <article className="mt-4 rounded-xl border border-brand-100 bg-brand-50/40 p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
-        Instructor Review & Resolution
-      </h3>
-      <p className="mt-1 text-xs leading-5 text-slate-600">
-        Teacher-facing workflow for final educational evaluation, student clarification handling, and
-        resolution tracking on the same evidence-based report.
-      </p>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-3">
-        <article className="rounded-xl border border-indigo-100 bg-white p-4 xl:col-span-2">
-          <h4 className="text-sm font-semibold text-indigo-700">Instructor Evaluation Form</h4>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Instructor Name</span>
-              <input
-                defaultValue={data.instructorEvaluation.instructorName}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-brand-200 focus:ring"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Review Status</span>
-              <input
-                defaultValue={data.instructorReview.reviewStatus}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-brand-200 focus:ring"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">AI Suggested Score</span>
-              <input
-                defaultValue={data.instructorReview.aiSuggestedScore}
-                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-600"
-                readOnly
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Final Confirmed Score</span>
-              <input
-                defaultValue={data.instructorReview.finalConfirmedScore}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-brand-200 focus:ring"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Optional Adjusted Score</span>
-              <input
-                defaultValue={data.instructorReview.adjustedScore}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-brand-200 focus:ring"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Alignment with AI</span>
-              <select
-                defaultValue={data.instructorReview.alignmentWithAi}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-brand-200 focus:ring"
-              >
-                <option>Fully agree</option>
-                <option>Partially adjust</option>
-                <option>Override</option>
-              </select>
-            </label>
-          </div>
-
-          <label className="mt-4 block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Teacher Comment</span>
-            <textarea
-              defaultValue={data.instructorReview.teacherComment}
-              className="h-24 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-brand-200 focus:ring"
-            />
-          </label>
-
-          <div className="mt-4">
-            <p className="text-sm font-medium text-slate-700">Teaching Focus</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {data.instructorReview.teachingFocus.map((focus) => (
-                <span
-                  key={focus}
-                  className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700"
-                >
-                  {focus}
-                </span>
-              ))}
-            </div>
-          </div>
-        </article>
-
-        <article className="rounded-xl border border-slate-200 bg-white p-4">
-          <h4 className="text-sm font-semibold text-slate-800">Student Objection / Clarification</h4>
-          <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-            <p>
-              <span className="font-medium text-slate-900">Submitted: </span>
-              {data.studentObjection.submitted ? "Yes" : "No"}
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">Resolution Status: </span>
-              {data.studentObjection.resolutionStatus}
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">Student Concern: </span>
-              {data.studentObjection.concernText}
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">Referenced Clip: </span>
-              {data.studentObjection.referencedClip}
-            </p>
-          </div>
-
-          <label className="mt-4 block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Teacher Response</span>
-            <textarea
-              defaultValue={data.studentObjection.teacherResponse}
-              className="h-24 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-brand-200 focus:ring"
-            />
-          </label>
-        </article>
-      </div>
-
-      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-        <h4 className="text-sm font-semibold text-slate-800">Review Actions</h4>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-            Save Draft
-          </button>
-          <button className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
-            Confirm Evaluation
-          </button>
-          <button className="rounded-md border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100">
-            Send Response to Student
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function InstructorReportFeedbackSection({ data }) {
-  const isInstructorPending = data.instructorEvaluation.evaluationStatus
-    .toLowerCase()
-    .includes("awaiting");
-
+function InstructorReportFeedbackSection({ data, onUpdated }) {
   return (
     <section className="mt-6 surface-card surface-card-lift p-6">
       <h2 className="text-lg font-semibold text-slate-900">Report Feedback & Review</h2>
@@ -638,48 +456,38 @@ function InstructorReportFeedbackSection({ data }) {
           </div>
         </article>
 
-        <article className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">
-            Instructor Evaluation
-          </h3>
-          <div className="mt-3 space-y-2 text-sm text-slate-700">
-            <p>
-              <span className="font-medium text-slate-900">Instructor: </span>
-              {data.instructorEvaluation.instructorName}
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">Status: </span>
-              {data.instructorReview.reviewStatus}
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">AI Suggested Score: </span>
-              {data.instructorReview.aiSuggestedScore}
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">Final Confirmed Score: </span>
-              {data.instructorReview.finalConfirmedScore}
-            </p>
-          </div>
-          <label className="mt-4 block text-sm font-medium text-slate-700">Comment</label>
-          <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm leading-6">
-            {isInstructorPending || !data.instructorReview.teacherComment ? (
-              <span className="italic text-slate-400">
-                Awaiting instructor comment after final review confirmation.
-              </span>
-            ) : (
-              <span className="text-slate-700">{data.instructorReview.teacherComment}</span>
-            )}
-          </div>
-        </article>
+        <ClarificationPanel report={data} onUpdated={onUpdated} />
       </div>
 
-      <InstructorReviewResolutionSection data={data} />
+      <div className="mt-4">
+        <InstructorReviewPanel report={data} onUpdated={onUpdated} />
+      </div>
     </section>
+  );
+}
+
+function BackLink({ isStaff, report }) {
+  if (!isStaff) {
+    return (
+      <Link to="/" className="link-brand text-sm font-medium">
+        Student dashboard
+      </Link>
+    );
+  }
+  const studentId = report?.meta?.studentId;
+  return (
+    <Link
+      to={studentId ? `/instructor/students/${studentId}` : "/instructor"}
+      className="link-brand text-sm font-medium"
+    >
+      ← {studentId ? report.meta.studentName : "Instructor overview"}
+    </Link>
   );
 }
 
 function TrainingReportPage() {
   const { user } = useAuth();
+  const isStaff = user.role !== "student";
   const [searchParams, setSearchParams] = useSearchParams();
   const [catalog, setCatalog] = useState([]);
   const [catalogError, setCatalogError] = useState(null);
@@ -693,17 +501,25 @@ function TrainingReportPage() {
 
   const [expanded, setExpanded] = useState(() => new Set());
   const [timelineSectionOpen, setTimelineSectionOpen] = useState(true);
-  const [viewMode, setViewMode] = useState("student");
+  const [viewMode, setViewMode] = useState(isStaff ? "instructor" : "student");
   const evidenceVideoRef = useRef(null);
 
   const loadCatalog = useCallback(() => {
     setCatalogLoading(true);
     setCatalogError(null);
-    api("/reports")
+    const wanted = new URLSearchParams(window.location.search).get("session");
+    // Instructors browse one student's reports: find whose report this is first.
+    const listPath =
+      isStaff && wanted
+        ? api(`/reports/${encodeURIComponent(wanted)}`).then(
+            (r) => `/reports?studentId=${r.meta.studentId}`,
+          )
+        : Promise.resolve(isStaff ? null : "/reports");
+    listPath
+      .then((path) => (path ? api(path) : []))
       .then((data) => {
         const items = data.map((item) => ({ id: item.sessionId, label: item.label }));
         setCatalog(items);
-        const wanted = new URLSearchParams(window.location.search).get("session");
         const nextId =
           wanted && items.some((item) => item.id === wanted) ? wanted : items[0]?.id ?? "";
         setSelectedId(nextId);
@@ -713,7 +529,7 @@ function TrainingReportPage() {
         setCatalog([]);
       })
       .finally(() => setCatalogLoading(false));
-  }, [user?.id]);
+  }, [user?.id, isStaff]);
 
   useEffect(() => {
     loadCatalog();
@@ -806,9 +622,7 @@ function TrainingReportPage() {
     return (
       <main className="mx-auto max-w-7xl px-4 py-16 text-center text-slate-600 md:px-8">
         <div className="mb-6 text-left">
-          <Link to="/" className="link-brand text-sm font-medium">
-            Student dashboard
-          </Link>
+          <BackLink isStaff={isStaff} report={report} />
         </div>
         Loading reports…
       </main>
@@ -819,9 +633,7 @@ function TrainingReportPage() {
     return (
       <main className="mx-auto max-w-7xl px-4 py-16 md:px-8">
         <div className="mb-6">
-          <Link to="/" className="link-brand text-sm font-medium">
-            Student dashboard
-          </Link>
+          <BackLink isStaff={isStaff} report={report} />
         </div>
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
           <p className="font-semibold">Could not load report catalog</p>
@@ -842,19 +654,27 @@ function TrainingReportPage() {
     return (
       <main className="mx-auto max-w-7xl px-4 py-16 md:px-8">
         <div className="mb-6">
-          <Link to="/" className="link-brand text-sm font-medium">
-            Student dashboard
-          </Link>
+          <BackLink isStaff={isStaff} report={report} />
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-slate-700 shadow-soft">
           <p className="font-semibold text-slate-900">No reports available</p>
-          <p className="mt-2 text-sm">
-            You don't have any finished reports yet.{" "}
-            <Link to="/train" className="link-brand">
-              Record a training session
-            </Link>{" "}
-            to get your first one.
-          </p>
+          {isStaff ? (
+            <p className="mt-2 text-sm">
+              Open a report from the{" "}
+              <Link to="/instructor/reviews" className="link-brand">
+                review queue
+              </Link>{" "}
+              or a student's page.
+            </p>
+          ) : (
+            <p className="mt-2 text-sm">
+              You don't have any finished reports yet.{" "}
+              <Link to="/train" className="link-brand">
+                Record a training session
+              </Link>{" "}
+              to get your first one.
+            </p>
+          )}
         </div>
       </main>
     );
@@ -864,9 +684,7 @@ function TrainingReportPage() {
     return (
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
         <div className="mb-4">
-          <Link to="/" className="link-brand text-sm font-medium">
-            Student dashboard
-          </Link>
+          <BackLink isStaff={isStaff} report={report} />
         </div>
         <header className="surface-card surface-card-lift p-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -910,9 +728,7 @@ function TrainingReportPage() {
   return (
     <main className="relative mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-4">
-        <Link to="/" className="link-brand text-sm font-medium">
-          Student dashboard
-        </Link>
+        <BackLink isStaff={isStaff} report={report} />
       </div>
       {reportError ? (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
@@ -977,30 +793,29 @@ function TrainingReportPage() {
               ))}
             </select>
           </label>
-          <span className="hidden sm:inline text-slate-300">|</span>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">View Mode</span>
-          <button
-            type="button"
-            onClick={() => setViewMode("student")}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              viewMode === "student"
-                ? "bg-brand-600 text-white"
-                : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            Student View
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("instructor")}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              viewMode === "instructor"
-                ? "bg-brand-600 text-white"
-                : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            Instructor View
-          </button>
+          {isStaff ? (
+            <>
+              <span className="hidden sm:inline text-slate-300">|</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">View</span>
+              {[
+                ["instructor", "Instructor"],
+                ["student", "As student sees it"],
+              ].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setViewMode(mode)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                    viewMode === mode
+                      ? "bg-brand-600 text-white"
+                      : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </>
+          ) : null}
         </div>
       </header>
 
@@ -1167,10 +982,13 @@ function TrainingReportPage() {
         </div>
       </section>
 
-      {viewMode === "instructor" ? (
-        <InstructorReportFeedbackSection data={report} />
+      {isStaff && viewMode === "instructor" ? (
+        <InstructorReportFeedbackSection data={report} onUpdated={setReport} />
       ) : (
-        <StudentReportFeedbackReflectionSection data={report} />
+        <StudentReportFeedbackReflectionSection
+          data={isStaff ? { ...report, review: report.review?.status === "completed" ? report.review : null } : report}
+          onUpdated={setReport}
+        />
       )}
     </main>
   );

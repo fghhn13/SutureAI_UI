@@ -9,7 +9,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from ..models import SessionStatus, TrainingSession, User, utcnow
+from ..models import InstructorReview, SessionStatus, TrainingSession, User, utcnow
+from .reviews import review_label
 
 S = SessionStatus
 _IN_PROGRESS = {S.CREATED.value, S.UPLOADED.value, S.SCORING.value, S.SCORED.value, S.GENERATING.value}
@@ -20,9 +21,24 @@ def short_reliability(label: str | None) -> str:
     return (label or "—").replace(" Confidence", "")
 
 
-def instructor_status(content: dict[str, Any]) -> str:
-    status = (content.get("instructorReview") or {}).get("reviewStatus") or "Pending"
-    return "Pending" if status == "Not Started" else status
+def load_sessions(db: Session, user_ids: list[int]) -> list[TrainingSession]:
+    """Sessions (oldest first) with everything the dashboards read, in a few queries."""
+    if not user_ids:
+        return []
+    return list(
+        db.scalars(
+            select(TrainingSession)
+            .where(TrainingSession.user_id.in_(user_ids))
+            .options(
+                selectinload(TrainingSession.task),
+                selectinload(TrainingSession.report),
+                selectinload(TrainingSession.scoring),
+                selectinload(TrainingSession.review).selectinload(InstructorReview.instructor),
+                selectinload(TrainingSession.feedback),
+            )
+            .order_by(TrainingSession.created_at)
+        )
+    )
 
 
 def issue_count(content: dict[str, Any]) -> int:
@@ -30,16 +46,7 @@ def issue_count(content: dict[str, Any]) -> int:
 
 
 def build_dashboard(db: Session, user: User) -> dict[str, Any]:
-    sessions = db.scalars(
-        select(TrainingSession)
-        .where(TrainingSession.user_id == user.id)
-        .options(
-            selectinload(TrainingSession.task),
-            selectinload(TrainingSession.report),
-            selectinload(TrainingSession.scoring),
-        )
-        .order_by(TrainingSession.created_at)
-    ).all()
+    sessions = load_sessions(db, [user.id])
 
     ready = [s for s in sessions if s.status == S.READY.value and s.report is not None]
     in_progress = [s for s in sessions if s.status in _IN_PROGRESS]
@@ -48,7 +55,7 @@ def build_dashboard(db: Session, user: User) -> dict[str, Any]:
 
     return {
         "studentName": user.display_name,
-        "courseName": user.course_name or "—",
+        "courseName": (user.cohort.course_name if user.cohort else user.course_name) or "—",
         "trainingFocus": user.training_focus or "—",
         "currentTask": _current_task(user, sessions),
         "lastReport": _last_report(latest),
@@ -72,11 +79,11 @@ def build_dashboard(db: Session, user: User) -> dict[str, Any]:
                 "task": s.task.name,
                 "score": s.report.overall_score,
                 "reliability": short_reliability(s.report.content.get("reliability")),
-                "instructorStatus": instructor_status(s.report.content),
+                "instructorStatus": review_label(s),
             }
             for s in reversed(ready)
         ],
-        "trainingActivityCalendar": _calendar(sessions),
+        "trainingActivityCalendar": build_calendar(sessions),
     }
 
 
@@ -107,7 +114,7 @@ def _last_report(latest: TrainingSession | None) -> dict[str, Any] | None:
         "reliability": c.get("reliability") or "—",
         "mainStrength": (c.get("strengths") or [highlights.get("strongestDimension", "—")])[0],
         "mainIssue": highlights.get("mainIssue") or "—",
-        "instructorStatus": instructor_status(c),
+        "instructorStatus": review_label(latest),
     }
 
 
@@ -161,13 +168,23 @@ def _notifications(
     recent = [s for s in ready if s.finished_at and s.finished_at >= week_ago]
     if recent:
         notes.append(f"{len(recent)} new report(s) ready in the last 7 days.")
-    pending_review = [s for s in ready if instructor_status(s.report.content) == "Pending"]
+    reviewed = [
+        s for s in ready if s.review and s.review.completed_at and s.review.completed_at >= week_ago
+    ]
+    if reviewed:
+        notes.append(f"Your instructor reviewed {len(reviewed)} report(s) this week.")
+    replied = [
+        s for s in ready if s.feedback and s.feedback.responded_at and s.feedback.responded_at >= week_ago
+    ]
+    if replied:
+        notes.append(f"Your instructor answered {len(replied)} clarification request(s).")
+    pending_review = [s for s in ready if review_label(s) == "Pending"]
     if pending_review:
         notes.append(f"{len(pending_review)} report(s) are waiting for instructor review.")
     return notes or ["You're all caught up."]
 
 
-def _calendar(sessions: list[TrainingSession]) -> dict[str, Any]:
+def build_calendar(sessions: list[TrainingSession]) -> dict[str, Any]:
     by_date: dict[str, dict[str, Any]] = {}
     for s in sessions:
         if s.status == S.CREATED.value:
@@ -189,7 +206,7 @@ def _calendar(sessions: list[TrainingSession]) -> dict[str, Any]:
                     "taskName": s.task.name,
                     "score": s.report.overall_score,
                     "reliability": short_reliability(s.report.content.get("reliability")),
-                    "instructorStatus": instructor_status(s.report.content),
+                    "instructorStatus": review_label(s),
                     "sessionId": s.id,
                 }
             )

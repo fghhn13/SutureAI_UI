@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from pydantic.alias_generators import to_camel
 
 
@@ -69,3 +69,24 @@ class ReportListItem(ApiModel):
     task_name: str
     overall_score: int
     recorded_at: datetime
+
+
+class ReviewIn(ApiModel):
+    final_score: int = Field(ge=0, le=100)
+    comment: str = Field(default="", max_length=5000)
+    teaching_focus: list[str] = Field(default_factory=list, max_length=10)
+    complete: bool = False
+
+
+class FeedbackIn(ApiModel):
+    kind: str
+    message: str = Field(default="", max_length=5000)
+    referenced_clip: str | None = None
+
+
+class FeedbackResponseIn(ApiModel):
+    response: str = Field(max_length=5000)
+
+
+class NoteIn(ApiModel):
+    note: str = Field(default="", max_length=5000)

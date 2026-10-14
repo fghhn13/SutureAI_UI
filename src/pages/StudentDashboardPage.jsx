@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
-import { DEMO_ACCOUNTS } from "../auth/demoAccounts.js";
+import DevUserSwitch from "../components/DevUserSwitch";
 import TrainingActivityCalendar from "../components/TrainingActivityCalendar";
 import { STATUS_LABELS } from "../api/sessionStatus.js";
 
@@ -18,7 +18,7 @@ function trainPath(taskId) {
 }
 
 export default function StudentDashboardPage() {
-  const { user, logout, devSwitchUser } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [D, setD] = useState(null);
   const [error, setError] = useState(null);
@@ -363,26 +363,7 @@ export default function StudentDashboardPage() {
         </section>
       </main>
 
-      {import.meta.env.DEV ? (
-        <div className="fixed bottom-4 right-4 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 shadow-lg transition-all duration-200 hover:border-amber-300 hover:shadow-xl">
-          <span className="text-xs font-semibold uppercase tracking-wide text-amber-900">Dev</span>
-          <label htmlFor="dev-user-switch" className="sr-only">
-            Switch demo user
-          </label>
-          <select
-            id="dev-user-switch"
-            value={user.email}
-            onChange={(e) => devSwitchUser(e.target.value)}
-            className="rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-slate-800"
-          >
-            {DEMO_ACCOUNTS.map((acc) => (
-              <option key={acc.login} value={acc.login}>
-                {acc.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : null}
+      <DevUserSwitch />
     </div>
   );
 }

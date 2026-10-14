@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -58,7 +58,7 @@ def create_session(
 
 @router.get("", response_model=list[SessionOut])
 def list_sessions(
-    status_filter: str | None = None,
+    status_filter: str | None = Query(None, alias="status"),
     limit: int = 50,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
