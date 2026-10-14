@@ -53,8 +53,8 @@ export function AuthProvider({ children }) {
   /** Dev-only: sign in as another seeded demo account. */
   const devSwitchUser = useCallback(
     async (email) => {
-      if (!import.meta.env.DEV) return;
-      await login(email, DEMO_PASSWORD);
+      if (!import.meta.env.DEV) return null;
+      return login(email, DEMO_PASSWORD);
     },
     [login],
   );

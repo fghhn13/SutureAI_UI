@@ -10,8 +10,8 @@ from fastapi import FastAPI
 from .config import Settings, get_settings
 from .db import Database
 from .providers import build_report_provider, build_scoring_provider
-from .routers import auth, dashboard, reports, sessions, tasks
-from .seed import is_empty, seed
+from .routers import auth, dashboard, instructor, reports, sessions, tasks
+from .seed import has_cohorts, is_empty, seed
 from .services.pipeline import Pipeline, Worker
 
 log = logging.getLogger("suture")
@@ -29,6 +29,11 @@ def create_app(settings: Settings | None = None, *, auto_seed: bool = True) -> F
         if auto_seed and is_empty(database):
             log.warning("Empty database — seeding demo data.")
             seed(database, settings)
+        elif not has_cohorts(database):
+            log.warning(
+                "Database predates cohorts/instructors; run `python -m app.seed --reset` "
+                "(from server/) to load the instructor demo data."
+            )
 
         worker = None
         if settings.worker_enabled:
@@ -51,7 +56,14 @@ def create_app(settings: Settings | None = None, *, auto_seed: bool = True) -> F
         build_report_provider(settings),
     )
 
-    for r in (auth.router, tasks.router, sessions.router, reports.router, dashboard.router):
+    for r in (
+        auth.router,
+        tasks.router,
+        sessions.router,
+        reports.router,
+        dashboard.router,
+        instructor.router,
+    ):
         app.include_router(r)
 
     @app.get("/api/health", tags=["meta"])

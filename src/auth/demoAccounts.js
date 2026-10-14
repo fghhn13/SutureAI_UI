@@ -6,6 +6,15 @@
 export const DEMO_PASSWORD = "suture-local-demo";
 
 export const DEMO_ACCOUNTS = [
-  { login: "alex@demo.local", displayName: "Alex Rivera" },
-  { login: "jordan@demo.local", displayName: "Jordan Kim" },
+  { login: "chen@demo.local", displayName: "Dr. Chen", note: "instructor · Groups A & B" },
+  { login: "patel@demo.local", displayName: "Dr. Patel", note: "instructor · Group B" },
+  { login: "alex@demo.local", displayName: "Alex Rivera", note: "student · Group A" },
+  { login: "sam@demo.local", displayName: "Sam Taylor", note: "student · improving" },
+  { login: "priya@demo.local", displayName: "Priya Shah", note: "student · declining" },
+  { login: "jordan@demo.local", displayName: "Jordan Kim", note: "student · Group B" },
 ];
+
+/** Where each role lands after signing in. */
+export function homePathFor(user) {
+  return user && user.role !== "student" ? "/instructor" : "/";
+}

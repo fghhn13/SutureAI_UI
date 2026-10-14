@@ -131,7 +131,6 @@ class TemplateReportProvider:
             "student": ctx.student_name,
             "recordedAt": ctx.recorded_at.isoformat() + "Z",
             "dateTime": ctx.recorded_at.strftime("%b %d, %Y · %H:%M UTC"),
-            "status": "Pending Instructor Review",
             "overallScore": overall,
             "reliability": reliability_label(confidence),
             "completed": completed,
@@ -165,35 +164,7 @@ class TemplateReportProvider:
                 + (f", including {len(errors)} error(s)." if errors else "."),
                 f"Focus next on {worst[0].name.lower()}: {worst[0].suggestion[0].lower()}{worst[0].suggestion[1:]}",
             ],
-            "instructorEvaluation": {
-                "instructorName": "Unassigned",
-                "evaluationStatus": "Awaiting instructor review",
-                "comment": "",
-                "finalScore": "",
-            },
-            "instructorReview": {
-                "reviewStatus": "Not Started",
-                "aiSuggestedScore": overall,
-                "finalConfirmedScore": overall,
-                "adjustedScore": 0,
-                "alignmentWithAi": "Pending",
-                "teacherComment": "",
-                "teachingFocus": [worst[0].name.lower()],
-            },
-            "studentObjection": {
-                "submitted": False,
-                "resolutionStatus": "Closed",
-                "concernText": "",
-                "referencedClip": "",
-                "teacherResponse": "",
-            },
-            "studentResponse": {
-                "helperText": "You may raise concerns if you believe a segment was misinterpreted.",
-                "acceptLabel": "Accept Feedback",
-                "clarifyLabel": "Request Clarification",
-            },
-            "personalNote": "",
             "uncertainty": uncertainty,
-            "instructorNote": "",
-            "reviewStatus": "Awaiting instructor confirmation",
+            # Review, feedback and notes live in their own tables and are merged in
+            # per viewer by services.reviews.report_view().
         }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "../auth/demoAccounts.js";
+import { DEMO_ACCOUNTS, DEMO_PASSWORD, homePathFor } from "../auth/demoAccounts.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 
 export default function LoginPage() {
@@ -8,7 +8,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromLoc = location.state?.from;
-  const from = fromLoc ? `${fromLoc.pathname}${fromLoc.search ?? ""}` : "/";
+  const from = fromLoc ? `${fromLoc.pathname}${fromLoc.search ?? ""}` : null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={homePathFor(user)} replace />;
   }
 
   async function handleSubmit(e) {
@@ -24,8 +24,8 @@ export default function LoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      await login(email, password);
-      navigate(from, { replace: true });
+      const u = await login(email, password);
+      navigate(from ?? homePathFor(u), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed.");
     } finally {
@@ -150,11 +150,13 @@ export default function LoginPage() {
             </p>
 
             <div className="mt-4 rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50/90 to-slate-50 p-4 text-xs text-slate-600 transition-colors duration-200 hover:border-brand-100">
-              <p className="font-semibold text-slate-800">Demo accounts</p>
+              <p className="font-semibold text-slate-800">
+                Demo accounts <span className="font-normal text-slate-500">(password {DEMO_PASSWORD})</span>
+              </p>
               <ul className="mt-2 space-y-1.5 font-mono text-[11px] leading-relaxed">
                 {DEMO_ACCOUNTS.map((acc) => (
                   <li key={acc.login} className="transition-colors hover:text-slate-900">
-                    {acc.login} / {DEMO_PASSWORD}
+                    {acc.login} <span className="font-sans text-slate-400">· {acc.note}</span>
                   </li>
                 ))}
               </ul>
@@ -163,7 +165,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-8 text-center text-xs text-slate-500 motion-safe:animate-fade-in-up motion-safe:[animation-delay:200ms]">
-          Student dashboard and reports require sign-in.
+          Students and instructors sign in here.
         </p>
       </main>
     </div>

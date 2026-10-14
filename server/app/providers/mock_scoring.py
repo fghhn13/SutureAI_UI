@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import time
+from collections.abc import Callable
 from typing import Any
 
 from .base import ScoringContext
@@ -21,8 +22,11 @@ def _clamp(v: float, lo: int = 30, hi: int = 98) -> int:
 class MockScoringProvider:
     name = "mock"
 
-    def __init__(self, delay_s: float = 0.0):
+    def __init__(self, delay_s: float = 0.0, skill_fn: Callable[[str], float | None] | None = None):
         self.delay_s = delay_s
+        # Optional per-session skill level (≈ expected score); the seed uses it to give demo
+        # students distinct trajectories.
+        self.skill_fn = skill_fn
 
     def score(self, ctx: ScoringContext) -> dict[str, Any]:
         if self.delay_s > 0:
@@ -141,7 +145,8 @@ class MockScoringProvider:
             notes.append("Video duration was not reported by the client; timestamps are estimated.")
         events.sort(key=lambda e: e["t"])
 
-        skill = rng.uniform(58, 88)
+        override = self.skill_fn(ctx.session_id) if self.skill_fn else None
+        skill = override if override is not None else rng.uniform(58, 88)
 
         def jitter() -> float:
             return rng.uniform(-8, 8)

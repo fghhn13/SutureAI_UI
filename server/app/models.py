@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Column, Float, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -37,6 +37,44 @@ class SessionStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+class Role(str, enum.Enum):
+    STUDENT = "student"
+    INSTRUCTOR = "instructor"
+    ADMIN = "admin"
+
+
+STAFF_ROLES = {Role.INSTRUCTOR.value, Role.ADMIN.value}
+
+# A student belongs to one cohort (unique user_id); an instructor may teach several.
+cohort_members = Table(
+    "cohort_members",
+    Base.metadata,
+    Column("cohort_id", ForeignKey("cohorts.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, unique=True),
+)
+
+cohort_instructors = Table(
+    "cohort_instructors",
+    Base.metadata,
+    Column("cohort_id", ForeignKey("cohorts.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Cohort(Base):
+    """A class/group of students taught by one or more instructors."""
+
+    __tablename__ = "cohorts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    course_name: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+    students: Mapped[list[User]] = relationship(secondary=cohort_members, order_by="User.display_name")
+    instructors: Mapped[list[User]] = relationship(secondary=cohort_instructors)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -53,6 +91,14 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     current_task: Mapped[Task | None] = relationship()
+    cohort: Mapped[Cohort | None] = relationship(secondary=cohort_members, viewonly=True)
+    teaching: Mapped[list[Cohort]] = relationship(
+        secondary=cohort_instructors, viewonly=True, order_by="Cohort.name"
+    )
+
+    @property
+    def is_staff(self) -> bool:
+        return self.role in STAFF_ROLES
 
 
 class AuthSession(Base):
@@ -100,6 +146,9 @@ class TrainingSession(Base):
     video: Mapped[Video | None] = relationship(back_populates="session", uselist=False)
     scoring: Mapped[ScoringResult | None] = relationship(back_populates="session", uselist=False)
     report: Mapped[Report | None] = relationship(back_populates="session", uselist=False)
+    review: Mapped[InstructorReview | None] = relationship(back_populates="session", uselist=False)
+    feedback: Mapped[StudentFeedback | None] = relationship(back_populates="session", uselist=False)
+    note: Mapped[StudentNote | None] = relationship(uselist=False)
 
 
 class Video(Base):
@@ -153,3 +202,83 @@ class Report(Base):
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     session: Mapped[TrainingSession] = relationship(back_populates="report")
+
+
+class ReviewStatus(str, enum.Enum):
+    DRAFT = "draft"  # saved by the instructor, not visible to the student
+    COMPLETED = "completed"
+
+
+class InstructorReview(Base):
+    """Instructor's evaluation of a session's report (one per session)."""
+
+    __tablename__ = "instructor_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("training_sessions.id", ondelete="CASCADE"), unique=True
+    )
+    instructor_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    status: Mapped[str] = mapped_column(String(20), default=ReviewStatus.DRAFT.value)
+    ai_score: Mapped[int] = mapped_column(Integer)
+    final_score: Mapped[int] = mapped_column(Integer)
+    comment: Mapped[str] = mapped_column(Text, default="")
+    teaching_focus: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
+    completed_at: Mapped[datetime | None]
+
+    session: Mapped[TrainingSession] = relationship(back_populates="review")
+    instructor: Mapped[User] = relationship()
+
+    @property
+    def alignment(self) -> str:
+        diff = abs(self.final_score - self.ai_score)
+        if diff == 0:
+            return "agree"
+        return "adjusted" if diff <= 10 else "override"
+
+
+class FeedbackKind(str, enum.Enum):
+    ACCEPT = "accept"
+    CLARIFY = "clarify"
+
+
+class FeedbackStatus(str, enum.Enum):
+    OPEN = "open"  # clarification waiting for the instructor
+    RESOLVED = "resolved"
+
+
+class StudentFeedback(Base):
+    """Student's response to a report: accept it, or ask for clarification (one per session)."""
+
+    __tablename__ = "student_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("training_sessions.id", ondelete="CASCADE"), unique=True
+    )
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    kind: Mapped[str] = mapped_column(String(20))
+    message: Mapped[str] = mapped_column(Text, default="")
+    referenced_clip: Mapped[str | None] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    response: Mapped[str | None] = mapped_column(Text)
+    responded_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    responded_at: Mapped[datetime | None]
+
+    session: Mapped[TrainingSession] = relationship(back_populates="feedback")
+    responded_by: Mapped[User | None] = relationship(foreign_keys=[responded_by_id])
+
+
+class StudentNote(Base):
+    """Private reflection a student keeps on their own report (not shown to instructors)."""
+
+    __tablename__ = "student_notes"
+
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("training_sessions.id", ondelete="CASCADE"), primary_key=True
+    )
+    note: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)

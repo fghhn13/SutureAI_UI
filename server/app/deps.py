@@ -9,6 +9,7 @@ from .config import Settings
 from .db import Database
 from .models import AuthSession, TrainingSession, User, utcnow
 from .security import session_token_id
+from .services.access import can_view_student
 
 
 def get_settings(request: Request) -> Settings:
@@ -38,14 +39,21 @@ def get_current_user(
     return auth.user
 
 
+def require_staff(user: User = Depends(get_current_user)) -> User:
+    if not user.is_staff:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Instructor access required.")
+    return user
+
+
 def get_owned_session(
     session_id: str,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> TrainingSession:
-    """Load a training session the current user may access (owner, or staff)."""
+    """Load a training session the current user may see: their own, or (for instructors)
+    one belonging to a student in a cohort they teach."""
     ts = db.get(TrainingSession, session_id)
     # 404 rather than 403 so ids of other users' sessions are not confirmed.
-    if ts is None or (ts.user_id != user.id and user.role not in {"instructor", "admin"}):
+    if ts is None or not can_view_student(db, user, ts.user_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Training session not found.")
     return ts
