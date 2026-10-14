@@ -1,20 +1,60 @@
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { api } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { DEMO_ACCOUNTS } from "../auth/demoAccounts.js";
 import TrainingActivityCalendar from "../components/TrainingActivityCalendar";
-import { getStudentDashboard, STUDENT_IDS } from "../data/studentDashboard.js";
+import { STATUS_LABELS } from "../api/sessionStatus.js";
 
-function reportSearch(reportId) {
-  return `?report=${encodeURIComponent(reportId)}`;
+/** Served from `public/picture/` so `<img src>` always resolves (incl. subpath `base`). */
+const AVATAR_SRC = `${(import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/")}picture/avatar-placeholder.svg`;
+
+function reportSearch(sessionId) {
+  return `?session=${encodeURIComponent(sessionId)}`;
+}
+
+function trainPath(taskId) {
+  return taskId ? `/train?task=${encodeURIComponent(taskId)}` : "/train";
 }
 
 export default function StudentDashboardPage() {
   const { user, logout, devSwitchUser } = useAuth();
   const navigate = useNavigate();
-  const D = getStudentDashboard(user.id);
+  const [D, setD] = useState(null);
+  const [error, setError] = useState(null);
 
-  function handleLogout() {
-    logout();
+  const load = useCallback(() => {
+    setError(null);
+    api("/dashboard")
+      .then(setD)
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load dashboard"));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load, user.id]);
+
+  async function handleLogout() {
+    await logout();
     navigate("/login", { replace: true });
+  }
+
+  if (error) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-16">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
+          <p className="font-semibold">Could not load your dashboard</p>
+          <p className="mt-2 text-sm">{error}</p>
+          <button type="button" onClick={load} className="btn-primary mt-4 px-4 py-2 text-sm">
+            Retry
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (!D) {
+    return <p className="py-24 text-center text-sm text-slate-500">Loading dashboard…</p>;
   }
 
   return (
@@ -26,7 +66,7 @@ export default function StudentDashboardPage() {
             <div className="group/avatar flex items-start gap-4">
               <div className="relative shrink-0 transition-transform duration-300 ease-smooth motion-safe:group-hover/avatar:scale-[1.04]">
                 <img
-                  src={D.profile.avatarSrc}
+                  src={AVATAR_SRC}
                   alt={`${D.studentName} — profile photo (prototype)`}
                   className="h-16 w-16 rounded-full border-2 border-white bg-slate-100 object-contain object-center p-1 shadow-md ring-2 ring-slate-200/90 ring-offset-2 ring-offset-white transition-[box-shadow] duration-300 group-hover/avatar:ring-brand-200 md:h-[5.25rem] md:w-[5.25rem]"
                 />
@@ -48,7 +88,7 @@ export default function StudentDashboardPage() {
             </div>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <div className="order-last flex flex-wrap items-center gap-2 sm:order-first">
-                <span className="text-sm text-slate-600" title={user.login}>
+                <span className="text-sm text-slate-600" title={user.email}>
                   Signed in as <span className="font-medium text-slate-800">{user.displayName}</span>
                 </span>
                 <button
@@ -59,22 +99,45 @@ export default function StudentDashboardPage() {
                   Log out
                 </button>
               </div>
-              <button
-                type="button"
-                title="Demo only — recording not started from this UI"
-                className="btn-primary"
+              <Link
+                to={trainPath(D.currentTask?.id)}
+                className="btn-primary inline-flex items-center justify-center"
               >
                 Start training
-              </button>
-              <Link
-                to={{ pathname: "/report", search: reportSearch(D.lastReportLinkReportId) }}
-                className="btn-secondary inline-flex items-center justify-center"
-              >
-                Open latest report
               </Link>
+              {D.lastReport ? (
+                <Link
+                  to={{ pathname: "/report", search: reportSearch(D.lastReport.sessionId) }}
+                  className="btn-secondary inline-flex items-center justify-center"
+                >
+                  Open latest report
+                </Link>
+              ) : null}
             </div>
           </div>
         </section>
+
+        {D.inProgress.length > 0 ? (
+          <section className="mt-6 rounded-2xl border border-brand-200 bg-brand-50/60 p-5 motion-safe:animate-fade-in-up">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
+              Recordings in progress
+            </h2>
+            <ul className="mt-3 space-y-2">
+              {D.inProgress.map((s) => (
+                <li
+                  key={s.sessionId}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white bg-white px-3 py-2 text-sm shadow-sm"
+                >
+                  <span className="font-medium text-slate-900">{s.taskName}</span>
+                  <span className="text-slate-500">{STATUS_LABELS[s.status] ?? s.status}</span>
+                  <Link to={`/train/${s.sessionId}`} className="link-brand text-sm">
+                    {s.status === "created" ? "Continue upload" : s.status === "failed" ? "Retry" : "View progress"}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {/* 2. Current task + Last report */}
         <div className="mt-6 grid gap-6 lg:grid-cols-2 motion-safe:animate-fade-in-up motion-safe:[animation-delay:70ms]">
@@ -83,6 +146,8 @@ export default function StudentDashboardPage() {
             <p className="mt-1 text-sm text-slate-600">
               What you are expected to complete next in this course.
             </p>
+            {D.currentTask ? (
+            <>
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex flex-wrap justify-between gap-2 border-b border-slate-100 pb-2">
                 <span className="text-slate-500">Task</span>
@@ -117,18 +182,21 @@ export default function StudentDashboardPage() {
               </div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              <button type="button" title="Demo only" className="btn-primary px-4 py-2 text-sm">
+              <Link to={trainPath(D.currentTask.id)} className="btn-primary inline-flex px-4 py-2 text-sm">
                 Start this task
-              </button>
-              <Link to="/report" className="btn-secondary inline-flex px-4 py-2 text-sm text-slate-700">
-                View task details
               </Link>
             </div>
+            </>
+            ) : (
+              <p className="mt-4 text-sm text-slate-600">No task assigned yet.</p>
+            )}
           </section>
 
           <section className="surface-card surface-card-lift p-6">
             <h2 className="text-lg font-semibold text-slate-900">Latest report snapshot</h2>
             <p className="mt-1 text-sm text-slate-600">Your most recent session at a glance.</p>
+            {D.lastReport ? (
+            <>
             <div className="mt-4 space-y-2 text-sm">
               <p>
                 <span className="text-slate-500">Task: </span>
@@ -159,11 +227,17 @@ export default function StudentDashboardPage() {
               </p>
             </div>
             <Link
-              to={{ pathname: "/report", search: reportSearch(D.lastReportLinkReportId) }}
+              to={{ pathname: "/report", search: reportSearch(D.lastReport.sessionId) }}
               className="btn-primary mt-5 inline-flex px-4 py-2 text-sm"
             >
               View full report
             </Link>
+            </>
+            ) : (
+              <p className="mt-4 text-sm text-slate-600">
+                No reports yet — record your first session to get one.
+              </p>
+            )}
           </section>
         </div>
 
@@ -179,7 +253,13 @@ export default function StudentDashboardPage() {
               </li>
               <li className="flex justify-between gap-4 border-b border-slate-100 pb-2">
                 <span className="text-slate-500">Score change</span>
-                <span className="font-semibold text-emerald-700">{D.trends.scoreChange}</span>
+                <span
+                  className={`font-semibold ${
+                    D.trends.scoreChange.startsWith("-") ? "text-rose-700" : "text-emerald-700"
+                  }`}
+                >
+                  {D.trends.scoreChange}
+                </span>
               </li>
               <li className="flex justify-between gap-4 border-b border-slate-100 pb-2">
                 <span className="text-slate-500">Completion time</span>
@@ -202,7 +282,10 @@ export default function StudentDashboardPage() {
               Focus on these before your next recording — highest impact for your progress.
             </p>
             <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm font-medium leading-6 text-slate-800">
-              {D.nextSteps.map((step) => (
+              {(D.nextSteps.length
+                ? D.nextSteps
+                : ["Record a session to get personalised practice priorities."]
+              ).map((step) => (
                 <li key={step}>{step}</li>
               ))}
             </ol>
@@ -240,7 +323,7 @@ export default function StudentDashboardPage() {
         {/* 5. History */}
         <section className="surface-card surface-card-lift mt-6 p-6 motion-safe:animate-fade-in-up motion-safe:[animation-delay:160ms]">
           <h2 className="text-lg font-semibold text-slate-900">Training history</h2>
-          <p className="mt-1 text-sm text-slate-600">Open any session report (demo links).</p>
+          <p className="mt-1 text-sm text-slate-600">Open any session report.</p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
@@ -256,7 +339,7 @@ export default function StudentDashboardPage() {
               <tbody>
                 {D.history.map((row) => (
                   <tr
-                    key={`${row.date}-${row.task}`}
+                    key={row.sessionId}
                     className="border-b border-slate-100 transition-colors duration-150 hover:bg-brand-50/60"
                   >
                     <td className="py-3 pr-4 text-slate-800">{row.date}</td>
@@ -266,7 +349,7 @@ export default function StudentDashboardPage() {
                     <td className="py-3 pr-4">{row.instructorStatus}</td>
                     <td className="py-3">
                       <Link
-                        to={{ pathname: "/report", search: reportSearch(row.reportId) }}
+                        to={{ pathname: "/report", search: reportSearch(row.sessionId) }}
                         className="link-brand text-sm"
                       >
                         View
@@ -288,13 +371,13 @@ export default function StudentDashboardPage() {
           </label>
           <select
             id="dev-user-switch"
-            value={user.id}
+            value={user.email}
             onChange={(e) => devSwitchUser(e.target.value)}
             className="rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-slate-800"
           >
-            {STUDENT_IDS.map((id) => (
-              <option key={id} value={id}>
-                {id}
+            {DEMO_ACCOUNTS.map((acc) => (
+              <option key={acc.login} value={acc.login}>
+                {acc.displayName}
               </option>
             ))}
           </select>

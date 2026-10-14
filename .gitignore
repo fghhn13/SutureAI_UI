@@ -52,3 +52,9 @@ public/picture/*
 # Local data at repo root only (does not affect src/data/)
 /data/*
 !/data/.gitkeep
+
+# Python backend
+server/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

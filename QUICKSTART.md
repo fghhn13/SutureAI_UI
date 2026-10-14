@@ -1,11 +1,11 @@
-# Quickstart · SutureAI UI
+# Quickstart · SutureAI
 
-最短路径把前端跑起来并登录演示账号。
+用最短路径把前后端跑起来，并完成一次上传训练录像的流程。
 
 ## 环境
 
 - [Node.js](https://nodejs.org/) **18+**（建议 LTS）
-- npm（随 Node 安装）
+- [Python](https://www.python.org/) **3.11+**
 
 ## 克隆与安装
 
@@ -15,55 +15,77 @@ cd SutureAI_UI
 npm install
 ```
 
-## 启动开发服务器
+后端依赖装在 `server/.venv`：
+
+```bash
+python -m venv server/.venv
+```
+
+```bash
+# Windows
+server\.venv\Scripts\python -m pip install -r server/requirements-dev.txt
+# macOS / Linux
+server/.venv/bin/python -m pip install -r server/requirements-dev.txt
+```
+
+## 启动
+
+开两个终端。
+
+**后端**（端口 8000；数据库为空时会自动写入演示数据）：
+
+在仓库根目录执行（Windows PowerShell 5.1 不支持 `&&`，所以不用 `cd server && ...`）：
+
+```bash
+# Windows (PowerShell)
+.\server\.venv\Scripts\python -m uvicorn app.main:app --app-dir server --reload --reload-dir server --port 8000
+# macOS / Linux
+server/.venv/bin/python -m uvicorn app.main:app --app-dir server --reload --reload-dir server --port 8000
+```
+
+**前端**（端口 5173，`/api` 会代理到后端）：
 
 ```bash
 npm run dev
 ```
 
-浏览器打开终端里显示的地址（一般为 **http://localhost:5173**）。
+浏览器打开 **http://localhost:5173**。
 
 ## 登录（演示）
 
-未登录访问 `/` 会跳到 **`/login`**。可使用：
+| 邮箱 | 密码 |
+|------|------|
+| `alex@demo.local` | `suture-local-demo` |
+| `jordan@demo.local` | `suture-local-demo` |
 
-| 邮箱 | 密码 | 说明 |
-|------|------|------|
-| `alex@demo.local` | `demo` | 完整仪表盘 mock；报告含 `report-video-demo` |
-| `jordan@demo.local` | `demo` | 精简数据；报告列表不含视频 demo 报告 |
+请勿在浏览器中保存上述账号；若曾保存过旧密码 `demo`，请在 Chrome **设置 → 密码管理器** 中删除本站点记录。
 
-登录后可访问 **`/`**（学生主页）与 **`/report`**（单次训练报告）。
+## 试一次训练流程
 
-开发模式下学生主页右下角 **Dev** 可切换用户而无需重新登录。
+1. 在学生主页点 **Start training**
+2. 选择任务，拖入任意一段视频（MP4 / WebM / MOV / MKV）
+3. 点 **Upload & analyse**，页面会依次显示上传、评分、生成报告三个步骤（mock 大约 6 秒）
+4. 点 **View report** 查看报告；时间轴和重点片段可以跳转到上传视频的对应位置
 
-## 可选：证据图片 / 视频
+目前评分是 mock，分数与视频内容无关，见 README 的「接入真实评分 API / LLM」。
 
-报告 JSON（`public/reports/*.json`）可引用 **`/picture/…`**、**`/video/…`**。若克隆后未放置对应文件，证据区可能空白；本地将素材放到：
+## 常用命令
 
-- `public/picture/`（与 JSON 中文件名一致）
-- `public/video/`
+| 命令 | 说明 |
+|------|------|
+| `.\server\.venv\Scripts\python -m pytest server` | 后端测试 |
+| `.\.venv\Scripts\python -m app.seed --reset`（在 `server/` 目录下执行） | 清空数据库和上传的视频，重新写入演示数据 |
+| `npm run build` | 前端生产构建，输出到 `dist/` |
 
-头像占位始终可用：**`public/picture/avatar-placeholder.svg`**（已随仓库提供）。
-
-## 生产构建与预览
-
-```bash
-npm run build
-npm run preview
-```
-
-产物在 **`dist/`**，可部署到任意静态托管。
+API 文档：后端运行时访问 http://127.0.0.1:8000/docs 。
 
 ## 常用路径
 
 | 路径 | 说明 |
 |------|------|
 | `/login` | 登录 |
-| `/` | 学生主页（需登录） |
-| `/report` | 报告页；可选 `?report=report-default` 等（见 `public/reports/catalog.json`） |
+| `/` | 学生主页 |
+| `/train` | 开始训练 / 上传录像 |
+| `/report?session=<id>` | 单次训练报告 |
 
-## 开发提示
-
-- 源码别名 **`@/`** → **`src/`**（见 `vite.config.js`、`jsconfig.json`）。
-- 学生仪表盘 mock：**`src/data/studentDashboard.js`** / **`getStudentDashboard(userId)`**。
-- 更完整的说明见 **[README.md](./README.md)**。
+更完整的说明（架构、数据库表、API、配置）见 **[README.md](./README.md)**。
