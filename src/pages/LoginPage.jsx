@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "../auth/demoAccounts.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 
 export default function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || "/";
+  const fromLoc = location.state?.from;
+  const from = fromLoc ? `${fromLoc.pathname}${fromLoc.search ?? ""}` : "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,10 +55,37 @@ export default function LoginPage() {
             <p className="text-sm font-semibold tracking-wide text-brand-700">SutureAI</p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">Sign in</h1>
             <p className="mt-1 text-sm text-slate-600">
-              Use the demo accounts below (local prototype only).
+              Local prototype only — do not save these credentials in your browser.
             </p>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+            <form
+              onSubmit={handleSubmit}
+              className="mt-8 space-y-4"
+              autoComplete="off"
+              data-form-type="other"
+              data-lpignore="true"
+              data-1p-ignore
+            >
+              {/* Decoy fields so Chrome is less likely to treat this as a real sign-in to save */}
+              <input
+                type="text"
+                name="prevent_autofill_username"
+                tabIndex={-1}
+                autoComplete="username"
+                className="pointer-events-none absolute h-0 w-0 opacity-0"
+                aria-hidden
+                readOnly
+              />
+              <input
+                type="password"
+                name="prevent_autofill_password"
+                tabIndex={-1}
+                autoComplete="current-password"
+                className="pointer-events-none absolute h-0 w-0 opacity-0"
+                aria-hidden
+                readOnly
+              />
+
               <div className="motion-safe:animate-fade-in-up-fast motion-safe:[animation-delay:40ms]">
                 <label
                   htmlFor="login-email"
@@ -66,8 +95,11 @@ export default function LoginPage() {
                 </label>
                 <input
                   id="login-email"
+                  name="suture_demo_login"
                   type="email"
-                  autoComplete="username"
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
@@ -84,12 +116,15 @@ export default function LoginPage() {
                 </label>
                 <input
                   id="login-password"
+                  name="suture_demo_secret"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-                  placeholder="demo"
+                  placeholder={DEMO_PASSWORD}
                   required
                 />
               </div>
@@ -108,11 +143,20 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-6 rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50/90 to-slate-50 p-4 text-xs text-slate-600 transition-colors duration-200 hover:border-brand-100">
+            <p className="mt-4 rounded-lg border border-amber-100 bg-amber-50/80 px-3 py-2 text-xs text-amber-950">
+              If Chrome still warns about a saved password, remove the old entry for this site under{" "}
+              <strong>Settings → Password Manager</strong> (the previous demo password was{" "}
+              <code className="font-mono">demo</code>).
+            </p>
+
+            <div className="mt-4 rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50/90 to-slate-50 p-4 text-xs text-slate-600 transition-colors duration-200 hover:border-brand-100">
               <p className="font-semibold text-slate-800">Demo accounts</p>
               <ul className="mt-2 space-y-1.5 font-mono text-[11px] leading-relaxed">
-                <li className="transition-colors hover:text-slate-900">alex@demo.local / demo</li>
-                <li className="transition-colors hover:text-slate-900">jordan@demo.local / demo</li>
+                {DEMO_ACCOUNTS.map((acc) => (
+                  <li key={acc.login} className="transition-colors hover:text-slate-900">
+                    {acc.login} / {DEMO_PASSWORD}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

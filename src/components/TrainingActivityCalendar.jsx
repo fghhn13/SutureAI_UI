@@ -97,8 +97,8 @@ export default function TrainingActivityCalendar({
     });
   }, [columns]);
 
-  const reportSearch = (reportId) =>
-    `?report=${encodeURIComponent(reportId)}`;
+  const reportSearch = (sessionId) =>
+    `?session=${encodeURIComponent(sessionId)}`;
 
   const onLeaveGrid = useCallback(() => {
     setHover(null);
@@ -304,7 +304,7 @@ export default function TrainingActivityCalendar({
                     </p>
                   </div>
                   <Link
-                    to={{ pathname: "/report", search: reportSearch(rec.reportId) }}
+                    to={{ pathname: "/report", search: reportSearch(rec.sessionId) }}
                     className="shrink-0 rounded-md bg-brand-600 px-3 py-1.5 text-center text-xs font-semibold text-white transition-all duration-200 hover:bg-brand-700 hover:shadow-md active:scale-[0.98]"
                   >
                     View report

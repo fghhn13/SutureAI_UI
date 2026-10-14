@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { api, apiUrl } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
-import { getAllowedReportIds } from "../data/reportAcl.js";
 
 function publicAssetUrl(path) {
   const base = import.meta.env.BASE_URL.endsWith("/")
@@ -9,6 +9,18 @@ function publicAssetUrl(path) {
     : `${import.meta.env.BASE_URL}/`;
   const p = path.startsWith("/") ? path.slice(1) : path;
   return `${base}${p}`;
+}
+
+/** Report media is either an API URL (uploaded video) or a static file under public/. */
+function mediaUrl(path) {
+  return path.startsWith("/api/") ? apiUrl(path) : publicAssetUrl(path);
+}
+
+function formatRecordedAt(report) {
+  if (!report.recordedAt) return report.dateTime;
+  const d = new Date(report.recordedAt);
+  if (Number.isNaN(d.getTime())) return report.dateTime;
+  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
 function defaultExpandedTimelineIds(timeline) {
@@ -668,6 +680,7 @@ function InstructorReportFeedbackSection({ data }) {
 
 function TrainingReportPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [catalog, setCatalog] = useState([]);
   const [catalogError, setCatalogError] = useState(null);
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -686,22 +699,13 @@ function TrainingReportPage() {
   const loadCatalog = useCallback(() => {
     setCatalogLoading(true);
     setCatalogError(null);
-    fetch(publicAssetUrl("reports/catalog.json"))
-      .then((res) => {
-        if (!res.ok) throw new Error(`Could not load catalog (${res.status})`);
-        return res.json();
-      })
+    api("/reports")
       .then((data) => {
-        const uid = user?.id ?? "alex";
-        const allowed = new Set(getAllowedReportIds(uid));
-        const filtered = Array.isArray(data) ? data.filter((item) => allowed.has(item.id)) : [];
-        setCatalog(filtered);
-        const params = new URLSearchParams(window.location.search);
-        const wanted = params.get("report");
+        const items = data.map((item) => ({ id: item.sessionId, label: item.label }));
+        setCatalog(items);
+        const wanted = new URLSearchParams(window.location.search).get("session");
         const nextId =
-          wanted && filtered.some((item) => item.id === wanted)
-            ? wanted
-            : filtered[0]?.id ?? "";
+          wanted && items.some((item) => item.id === wanted) ? wanted : items[0]?.id ?? "";
         setSelectedId(nextId);
       })
       .catch((err) => {
@@ -715,21 +719,21 @@ function TrainingReportPage() {
     loadCatalog();
   }, [loadCatalog]);
 
+  const sessionParam = searchParams.get("session");
   useEffect(() => {
-    if (!selectedId || catalog.length === 0) return undefined;
+    if (sessionParam && catalog.some((item) => item.id === sessionParam)) {
+      setSelectedId(sessionParam);
+    }
+  }, [sessionParam, catalog]);
 
-    const entry = catalog.find((item) => item.id === selectedId);
-    if (!entry) return undefined;
+  useEffect(() => {
+    if (!selectedId) return undefined;
 
     let cancelled = false;
     setReportLoading(true);
     setReportError(null);
 
-    fetch(publicAssetUrl(entry.path.replace(/^\//, "")))
-      .then((res) => {
-        if (!res.ok) throw new Error(`Could not load report (${res.status})`);
-        return res.json();
-      })
+    api(`/reports/${encodeURIComponent(selectedId)}`)
       .then((data) => {
         if (!cancelled) setReport(data);
       })
@@ -745,7 +749,12 @@ function TrainingReportPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedId, catalog, reportRetryToken]);
+  }, [selectedId, reportRetryToken]);
+
+  const selectReport = (id) => {
+    setSelectedId(id);
+    setSearchParams({ session: id }, { replace: true });
+  };
 
   useEffect(() => {
     if (!report?.timeline) return;
@@ -778,12 +787,12 @@ function TrainingReportPage() {
 
   const evidenceSrc =
     report?.evidencePreviewUrl != null && report.evidencePreviewUrl !== ""
-      ? publicAssetUrl(report.evidencePreviewUrl.replace(/^\//, ""))
+      ? mediaUrl(report.evidencePreviewUrl)
       : publicAssetUrl("picture/微信图片_20260421160900_112_99.png");
 
   const evidenceVideoUrl =
     report?.evidenceVideoUrl != null && String(report.evidenceVideoUrl).trim() !== ""
-      ? publicAssetUrl(String(report.evidenceVideoUrl).replace(/^\//, ""))
+      ? mediaUrl(String(report.evidenceVideoUrl))
       : null;
 
   const seekEvidenceVideoToSeconds = (seconds) => {
@@ -840,7 +849,11 @@ function TrainingReportPage() {
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-slate-700 shadow-soft">
           <p className="font-semibold text-slate-900">No reports available</p>
           <p className="mt-2 text-sm">
-            Your account does not have any training reports in the catalog yet.
+            You don't have any finished reports yet.{" "}
+            <Link to="/train" className="link-brand">
+              Record a training session
+            </Link>{" "}
+            to get your first one.
           </p>
         </div>
       </main>
@@ -863,7 +876,7 @@ function TrainingReportPage() {
               </span>
               <select
                 value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
+                onChange={(e) => selectReport(e.target.value)}
                 className="min-w-[240px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800"
               >
                 {catalog.map((item) => (
@@ -938,7 +951,7 @@ function TrainingReportPage() {
           </p>
           <p>
             <span className="font-medium text-slate-800">Date & Time: </span>
-            {report.dateTime}
+            {formatRecordedAt(report)}
           </p>
           <p>
             <span className="font-medium text-slate-800">Task Duration: </span>
@@ -954,7 +967,7 @@ function TrainingReportPage() {
             Session
             <select
               value={selectedId}
-              onChange={(e) => setSelectedId(e.target.value)}
+              onChange={(e) => selectReport(e.target.value)}
               className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium normal-case text-slate-800"
             >
               {catalog.map((item) => (
@@ -1004,7 +1017,17 @@ function TrainingReportPage() {
                 </p>
                 <p>
                   <span className="font-medium text-slate-800">Change vs Last: </span>
-                  <span className="font-semibold text-emerald-600">{report.delta}</span>
+                  <span
+                    className={`font-semibold ${
+                      String(report.delta).startsWith("-")
+                        ? "text-rose-600"
+                        : String(report.delta).startsWith("+")
+                          ? "text-emerald-600"
+                          : "text-slate-600"
+                    }`}
+                  >
+                    {report.delta}
+                  </span>
                 </p>
                 <p>
                   <span className="font-medium text-slate-800">Duration: </span>
@@ -1031,7 +1054,7 @@ function TrainingReportPage() {
             {report.uncertainty.map((item, index) => (
               <li key={item} className="rounded-lg bg-slate-50 px-3 py-2">
                 <span className="font-semibold text-amber-700">
-                  {index === 0 ? "Moderate confidence: " : "Caution: "}
+                  {index === 0 ? `${report.reliability}: ` : "Caution: "}
                 </span>
                 <span className="text-slate-700">{item}</span>
               </li>

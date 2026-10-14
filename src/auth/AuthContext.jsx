@@ -6,71 +6,69 @@ import {
   useMemo,
   useState,
 } from "react";
-import { SESSION_STORAGE_KEY } from "./constants.js";
-import { MOCK_ACCOUNTS } from "./mockAccounts.js";
-import { loginWithMockCredentials } from "./mockAuth.js";
+import { api, ApiError } from "../api/client.js";
+import { DEMO_PASSWORD } from "./demoAccounts.js";
+
+/** @typedef {{ id: number, email: string, displayName: string, role: string }} AuthUser */
 
 const AuthContext = createContext(null);
 
-function readStoredSession() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.user?.id) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(() => readStoredSession());
+  /** @type {[AuthUser | null, Function]} */
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // Restore the session from the httpOnly cookie on first load.
   useEffect(() => {
-    if (session) {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-    } else {
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    }
-  }, [session]);
-
-  const login = useCallback(async (loginEmail, password) => {
-    const result = loginWithMockCredentials(loginEmail, password);
-    if (!result) {
-      throw new Error("Invalid email or password.");
-    }
-    setSession(result);
-    return result.user;
-  }, []);
-
-  const logout = useCallback(() => {
-    setSession(null);
-  }, []);
-
-  const devSwitchUser = useCallback((userId) => {
-    if (!import.meta.env.DEV) return;
-    const acc = MOCK_ACCOUNTS.find((a) => a.id === userId);
-    if (!acc) return;
-    const user = {
-      id: acc.id,
-      login: acc.login,
-      displayName: acc.displayName,
-      role: acc.role,
+    let cancelled = false;
+    api("/auth/me")
+      .then((u) => {
+        if (!cancelled) setUser(u);
+      })
+      .catch((err) => {
+        if (!(err instanceof ApiError && err.status === 401)) console.error(err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
-    setSession({ user, token: `mock.${acc.id}` });
   }, []);
+
+  const login = useCallback(async (email, password) => {
+    const u = await api("/auth/login", { method: "POST", body: { email, password } });
+    setUser(u);
+    return u;
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await api("/auth/logout", { method: "POST" });
+    } finally {
+      setUser(null);
+    }
+  }, []);
+
+  /** Dev-only: sign in as another seeded demo account. */
+  const devSwitchUser = useCallback(
+    async (email) => {
+      if (!import.meta.env.DEV) return;
+      await login(email, DEMO_PASSWORD);
+    },
+    [login],
+  );
 
   const value = useMemo(
     () => ({
-      user: session?.user ?? null,
-      token: session?.token ?? null,
+      user,
+      loading,
       login,
       logout,
       devSwitchUser,
-      isAuthenticated: Boolean(session?.user),
+      isAuthenticated: Boolean(user),
     }),
-    [session, login, logout, devSwitchUser],
+    [user, loading, login, logout, devSwitchUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

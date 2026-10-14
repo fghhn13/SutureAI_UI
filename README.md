@@ -2,115 +2,158 @@
 
 快速上手请阅 **[QUICKSTART.md](./QUICKSTART.md)**。
 
-SutureAI 缝合技能训练的一页式报告看板，用于展示单次训练的综合得分、多维度能力分析、时间轴事件与重点片段，并预留教官评审与学员反馈等界面区域。
+SutureAI 缝合技能训练平台：学生上传训练录像 → 视频评分 → 生成报告 → 在看板中查看。前端是 React（Vite），后端是 FastAPI + SQLite（`server/`）。
 
 ## 功能概览
 
-- **总览**：产品/任务信息、综合得分环、与基准对比的增量、训练时长与完成状态
-- **五维评分**：效率、精准度、流程、安全、质量等维度的分数与说明，附雷达图
-- **时间轴**：按时间线展示关键事件（正常 / 警告 / 问题），可展开查看详情
-- **重点片段**：与训练相关的证据预览（图片或视频）；可选 **`evidenceVideoUrl`** 时用内置播放器；时间轴 / Key Clips 可 **跳转回放**（见 `timeSeconds`）
-- **评价与建议**：优势、待改进、练习建议、AI 摘要、不确定性说明
-- **教官与学员**：教官评语/终评、学员接受或澄清等交互占位
-- **学生主页（摘要）**：课程与任务概览、最近报告摘要、趋势、练习重点、通知与历史；每用户数据由 `getStudentDashboard(userId)` 解析，源数据在 `src/data/studentDashboard.js`（`studentDashboardMock.js` 为兼容 re-export）
-- **登录（原型）**：本地 mock 账号 + `sessionStorage` 会话；后续可替换为同一套 `AuthProvider` 下的 API 登录
+- **开始训练（`/train`）**：选择任务 → 上传录像（拖拽、预览、读取时长、进度条、可取消）→ 实时显示处理进度 → 完成后跳转报告；失败可重试
+- **学生主页（`/`）**：当前任务、最近报告、趋势、练习重点、通知、进行中的录像、训练日历与历史，全部由 `GET /api/dashboard` 从数据库聚合
+- **报告页（`/report`）**：综合得分、五维评分与雷达图、时间轴（可跳转回放上传的视频）、重点片段、评价与建议、教官/学员交互占位
+- **登录**：服务端会话（httpOnly cookie），密码 scrypt 哈希存储
+
+## 架构
+
+```
+浏览器 (Vite/React :5173) ──/api 代理──▶ FastAPI (:8000) ──▶ SQLite  data/app.db
+                                              │
+                                              ├─ 视频文件   data/videos/<sessionId>.<ext>
+                                              └─ 后台 worker（进程内线程）
+                                                   ├─ ScoringProvider  评分（现为 mock）
+                                                   └─ ReportProvider   报告生成（现为模板；之后接 LLM）
+```
+
+### 训练会话状态机
+
+```
+created → uploaded → scoring → scored → generating → ready
+                        └──────────┴────────────────→ failed（可重试）
+```
+
+- 上传完成后接口立即返回，worker 从数据库领取任务处理；前端每 2 秒轮询 `GET /api/sessions/:id`。
+- 状态全部存在 `training_sessions` 表里，服务重启后会把中断的 `scoring/generating` 重新排队。
+- 评分原始结果（`scoring_results.raw`）与最终报告（`reports.content`）分开存，换 LLM / 改 prompt 后可以只重跑报告步骤。
+- 重试会从最后成功的步骤继续（已评分则只重新生成报告）。
+
+### 接入真实评分 API / LLM
+
+两个外部步骤都是可替换的 provider（`server/app/providers/`）：
+
+| 步骤 | 接口 | 当前实现 | 切换方式 |
+|------|------|----------|----------|
+| 视频评分 | `ScoringProvider.score(ctx) -> dict` | `MockScoringProvider`（按 session id 生成确定性的假数据，不看视频内容） | 新增 provider，在 `providers/__init__.py` 注册，设置 `SUTURE_SCORING_PROVIDER` |
+| 报告生成 | `ReportProvider.generate(ctx) -> dict` | `TemplateReportProvider`（规则模板） | 同上，`SUTURE_REPORT_PROVIDER` |
+
+- 评分输出格式（schemaVersion 1）写在 `providers/base.py` 的文档字符串里。真实 API 的 adapter 负责转换成这个格式。
+- 报告输出格式就是报告页渲染的 JSON，样例见 `server/seed/reports/*.json`。
+
+## 数据库表
+
+| 表 | 说明 |
+|----|------|
+| `users` | 账号、角色（student / instructor / admin）、课程与当前任务 |
+| `auth_sessions` | 登录会话（只存 token 的 sha256） |
+| `tasks` | 训练任务（名称、说明、评分维度） |
+| `training_sessions` | 一次训练录像的生命周期与状态 |
+| `videos` | 上传的视频元数据（路径、大小、时长、sha256） |
+| `scoring_results` | 评分 provider 的原始输出 |
+| `reports` | 最终报告 JSON |
+
+目前用 `create_all` 建表；表结构稳定后建议接入 Alembic 做迁移。
+
+## API
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/auth/login` · `/api/auth/logout` | 登录 / 登出 |
+| GET | `/api/auth/me` | 当前用户 |
+| GET | `/api/tasks` | 任务列表 |
+| POST | `/api/sessions` | 创建训练会话 `{ taskId }` |
+| GET | `/api/sessions` · `/api/sessions/:id` | 我的会话 / 单个会话状态 |
+| POST | `/api/sessions/:id/video` | 上传视频（multipart：`file`，可选 `durationSeconds`） |
+| GET | `/api/sessions/:id/video` | 视频流（支持 Range，可拖动进度） |
+| POST | `/api/sessions/:id/retry` | 重试失败的会话 |
+| GET | `/api/reports` · `/api/reports/:sessionId` | 我的报告列表 / 报告内容 |
+| GET | `/api/dashboard` | 学生主页聚合数据 |
+
+后端运行时可在 http://127.0.0.1:8000/docs 查看自动生成的 OpenAPI 文档。学生只能访问自己的会话；`instructor` / `admin` 角色可查看任意会话（教官端界面尚未实现）。
 
 ## 路由
 
 | 路径 | 说明 |
 |------|------|
-| `/login` | 登录页（演示账号见下表）；已登录时访问会重定向到 `/` |
-| `/` | 学生主页（需登录；仪表盘摘要，非完整单次报告） |
-| `/report` | 单次训练报告完整页（需登录）；可选 `?report=<id>`。会话用户若在 ACL 中无权访问某报告，目录会自动过滤（见 `src/data/reportAcl.js`） |
+| `/login` | 登录页；已登录时重定向到 `/` |
+| `/` | 学生主页 |
+| `/train` | 开始训练；`?task=<taskId>` 预选任务 |
+| `/train/:sessionId` | 查看某次训练的处理进度（刷新页面不会丢失） |
+| `/report?session=<sessionId>` | 单次训练报告 |
 
 ### 演示账号（本地原型，非生产）
 
+首次启动后端时如果数据库为空，会自动写入演示数据（`server/app/seed.py`）：3 个任务、2 个学生账号，以及用真实流水线（mock 评分 + 模板报告）生成的历史训练记录，外加 `server/seed/reports/` 里的 3 份手写样例报告。
+
 | 登录邮箱 | 密码 | 说明 |
 |----------|------|------|
-| `alex@demo.local` | `demo` | 完整示例数据；报告目录含 `report-default`、`report-alt`、`report-video-demo` |
-| `jordan@demo.local` | `demo` | 稀疏示例数据；报告目录仅 `report-default`、`report-alt` |
+| `alex@demo.local` | `suture-local-demo` | 17 条历史记录（含视频时间戳样例报告） |
+| `jordan@demo.local` | `suture-local-demo` | 5 条历史记录 |
 
-开发模式下学生主页右下角有 **Dev** 下拉框，可在不重新登录的情况下切换上述用户以验证数据差异。
+演示密码不用 `demo`，以免 Chrome 将其识别为已泄露的常见密码并反复提示。
 
-## 报告数据（JSON + 运行时加载）
+开发模式下学生主页右下角有 **Dev** 下拉框，可以直接切换到另一个演示账号。
 
-单次训练报告的载荷放在 **`public/reports/`**，开发或预览时修改 JSON 后**刷新页面**即可生效（无需改 React 代码）。
+## 配置（环境变量）
 
-| 文件 | 说明 |
-|------|------|
-| `public/reports/catalog.json` | 报告索引：`id`、`label`（下拉展示）、`path`（相对站点根的路径，如 `/reports/report-default.json`） |
-| `public/reports/report-default.json` | 默认示例报告 |
-| `public/reports/report-alt.json` | 第二份示例（用于验证切换） |
-| `public/reports/report-video-demo.json` | Demo report aligned with `docs/视频戳.md` timestamps; includes **`evidenceVideoUrl`** and **`timeSeconds`** |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `SUTURE_DATA_DIR` | `<repo>/data` | `app.db` 与 `videos/` 所在目录 |
+| `SUTURE_MAX_UPLOAD_MB` | `1024` | 单个视频上限 |
+| `SUTURE_SESSION_TTL_HOURS` | `168` | 登录有效期 |
+| `SUTURE_COOKIE_SECURE` | `0` | HTTPS 部署时设为 `1` |
+| `SUTURE_SCORING_PROVIDER` / `SUTURE_REPORT_PROVIDER` | `mock` / `template` | provider 选择 |
+| `SUTURE_MOCK_SCORING_DELAY_S` / `SUTURE_MOCK_REPORT_DELAY_S` | `4` / `2` | mock 的模拟耗时，方便观察进度界面 |
+| `SUTURE_WORKER_ENABLED` | `1` | 是否在 API 进程内启动 worker |
 
-每条报告 JSON 内需包含 **`evidencePreviewUrl`**（证据预览图 URL，如 `/picture/xxx.png`，可作视频 **poster**）。大尺寸预览图放在 **`public/picture/`**（默认不纳入 Git，见下文），构建后会拷贝到 `dist/`。
+前端开发服务器把 `/api` 代理到 `SUTURE_API_URL`（默认 `http://127.0.0.1:8000`），见 `vite.config.js`。
 
-可选 **`evidenceVideoUrl`**（如 `/video/suture_1.mp4`）：视频放在 **`public/video/`**（默认不纳入 Git）。若设置了该字段，证据区显示 `<video controls>`；时间轴每条事件与每个 clip 可使用 **`timeSeconds`**（秒）以便跳转；未提供时尝试解析 **`time`** 字符串（如 `0:02`、`1:23`）。
+## Git 与本地素材
 
-### Git 与本地素材（视频 / 大图）
+`data/`（数据库与上传的视频）、`public/picture/`、`public/video/` 下的实际文件都不纳入 Git。样例报告 `report-video-demo.json` 引用的是静态文件 `/video/suture_1.mp4`，需要自己放到 `public/video/`；新上传的视频由后端提供，不需要手动放置。
 
-仓库根目录 **`.gitignore`** 已忽略常见视频后缀，以及 **`public/picture/`**、**`public/video/`** 下的实际文件（仅保留 `.gitkeep` 占位目录）。克隆后请在本地自行放入与 `public/reports/*.json` 中路径一致的图片与录像，否则证据区可能无法显示。
-
-学生主页头像使用 **`public/picture/avatar-placeholder.svg`**（小 SVG，随仓库提交）；`<img>` 通过 `import.meta.env.BASE_URL` 拼接路径，部署在子路径（`base`）下也能加载。
-
-页面顶部 **Session** 下拉框用于切换报告。也可通过 URL 指定初始报告：`?report=report-alt`（`report` 的值对应 `catalog.json` 里的 `id`）。
+报告没有 `evidencePreviewUrl` 时，证据区会回退到 `public/picture/` 里的默认预览图。
 
 ## 技术栈
 
-| 类型     | 选用 |
-|----------|------|
-| 框架     | [React 18](https://react.dev/) |
-| 路由     | [React Router 6](https://reactrouter.com/) |
-| 构建     | [Vite 5](https://vitejs.dev/)（`@` → `src/`，见 `vite.config.js` + `jsconfig.json`） |
-| 样式     | [Tailwind CSS 3](https://tailwindcss.com/) |
-
-## 环境要求
-
-- [Node.js](https://nodejs.org/) 18+（建议 LTS）
-
-## 安装与运行
-
-```bash
-npm install
-npm run dev
-```
-
-浏览器访问终端里提示的本地地址（一般为 `http://localhost:5173`）。
-
-## 其他脚本
-
-| 命令 | 说明 |
+| 类型 | 选用 |
 |------|------|
-| `npm run build` | 生产构建，输出到 `dist/` |
-| `npm run preview` | 本地预览构建结果 |
+| 前端 | React 18、React Router 6、Vite 5、Tailwind CSS 3 |
+| 后端 | FastAPI、SQLAlchemy 2、SQLite（WAL）、Uvicorn |
+| 测试 | pytest（`server/tests/`） |
 
 ## 项目结构（简要）
 
 ```
 .
-├── index.html
-├── package.json
-├── vite.config.js
-├── tailwind.config.js
-├── postcss.config.js
-├── public/
-│   ├── reports/         # 报告 catalog + 各次会话 JSON（运行时 fetch）
-│   ├── picture/         # 证据大图（本地放置；Git 忽略除 .gitkeep）
-│   └── video/           # 证据录像（本地放置；Git 忽略除 .gitkeep）
-├── src/
-│   ├── main.jsx
-│   ├── index.css
-│   ├── assets/          # 可选：打包用静态资源（头像占位在 public/picture）
-│   ├── App.jsx          # 路由：/login、受保护的 / 与 /report
-│   ├── auth/            # AuthProvider、mock 登录（可换 API）
-│   ├── data/
-│   │   ├── studentDashboard.js   # 按 userId 的学生仪表盘 mock
-│   │   ├── studentDashboardMock.js
-│   │   └── reportAcl.js          # 每用户可见的报告 id（过滤 catalog）
+├── src/                      # 前端
+│   ├── api/                  # fetch 封装、上传进度、会话状态常量
+│   ├── auth/                 # AuthProvider（调用 /api/auth）、演示账号列表
+│   ├── components/
 │   └── pages/
+│       ├── LoginPage.jsx
 │       ├── StudentDashboardPage.jsx
-│       └── TrainingReportPage.jsx   # 读取 public/reports JSON
-├── jsconfig.json        # 路径别名 @/* → src/*（与 Vite 一致）
+│       ├── TrainingSessionPage.jsx   # 选任务 / 上传 / 进度
+│       └── TrainingReportPage.jsx
+├── server/                   # 后端
+│   ├── app/
+│   │   ├── main.py           # create_app、生命周期、worker 启动
+│   │   ├── config.py         # SUTURE_* 环境变量
+│   │   ├── models.py         # SQLAlchemy 表
+│   │   ├── routers/          # auth / tasks / sessions / reports / dashboard
+│   │   ├── services/         # pipeline（状态机 + worker）、storage、dashboard 聚合
+│   │   ├── providers/        # 评分与报告 provider（mock / template）
+│   │   └── seed.py           # 演示数据
+│   ├── seed/reports/         # 手写样例报告 JSON
+│   └── tests/
+├── data/                     # 运行时数据（Git 忽略）
+└── public/                   # 静态资源
 ```
 
 ## 许可证
