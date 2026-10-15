@@ -2,8 +2,10 @@
 /**
  * Local dev launcher: starts the FastAPI backend and the Vite frontend together.
  *
- *   npm start                 # install whatever is missing, then run both
- *   npm run setup             # only install (Python venv + npm packages)
+ *   npm start                         # install whatever is missing, then run both
+ *   npm run setup                     # only install (Python venv + npm packages)
+ *   npm run demo:reset                # reseed the demo database (deletes local data)
+ *   npm run demo:register -- <video>  # mark a video file as the demo recording
  *
  * Env: API_PORT (default 8000), WEB_PORT (default 5173), PYTHON (interpreter used to
  * create server/.venv; default "python" on Windows, "python3" elsewhere).
@@ -12,7 +14,7 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -26,6 +28,8 @@ const VITE_BIN = join(ROOT, "node_modules", "vite", "bin", "vite.js");
 const API_PORT = process.env.API_PORT ?? "8000";
 const WEB_PORT = process.env.WEB_PORT ?? "5173";
 const SETUP_ONLY = process.argv.includes("--setup-only");
+const RESET_DEMO = process.argv.includes("--reset-demo");
+const REGISTER_IDX = process.argv.indexOf("--register-demo");
 
 const color = (code) => (s) => (process.stdout.isTTY ? `\x1b[${code}m${s}\x1b[0m` : s);
 const cyan = color(36);
@@ -132,6 +136,20 @@ async function waitForApi(timeoutMs = 30000) {
 }
 
 setup();
+if (RESET_DEMO || REGISTER_IDX !== -1) {
+  // Run app.seed / app.demo from server/ so the app package resolves.
+  const args =
+    REGISTER_IDX !== -1
+      ? // npm runs scripts from the package root; INIT_CWD is where the user typed the command.
+        ["-m", "app.demo", "register", resolve(process.env.INIT_CWD ?? process.cwd(), process.argv[REGISTER_IDX + 1] ?? "")]
+      : ["-m", "app.seed", "--reset"];
+  if (REGISTER_IDX !== -1 && !process.argv[REGISTER_IDX + 1]) {
+    console.error(red("[dev] usage: npm run demo:register -- path/to/video.mp4"));
+    process.exit(1);
+  }
+  const res = spawnSync(VENV_PY, args, { cwd: SERVER_DIR, stdio: "inherit" });
+  process.exit(res.status ?? 1);
+}
 if (SETUP_ONLY) {
   log("Setup complete. Run `npm start` to launch.");
   process.exit(0);

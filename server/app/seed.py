@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -24,8 +25,8 @@ from .config import Settings, get_settings
 from .db import Base, Database
 from .models import (
     Cohort,
-    FeedbackKind,
-    FeedbackStatus,
+    Appeal,
+    AppealReason,
     InstructorReview,
     Report,
     ReviewStatus,
@@ -41,6 +42,7 @@ from .providers.mock_scoring import MockScoringProvider
 from .providers.template_report import TemplateReportProvider
 from .security import hash_password
 from .services.pipeline import Pipeline
+from .services.reviews import SUGGESTED_ADJUSTMENT, event_seconds
 
 SEED_DIR = Path(__file__).resolve().parents[1] / "seed"
 DEMO_PASSWORD = "suture-local-demo"
@@ -101,7 +103,8 @@ class StudentSpec:
     # (sample file, task id, days ago)
     samples: list[tuple[str, str, int]] = field(default_factory=list)
     failed_sessions: int = 0
-    clarify_latest: str | None = None
+    # Open appeal on the first flagged event of the latest report: (reason, message).
+    appeal_latest: tuple[str, str] | None = None
 
 
 STUDENTS = [
@@ -124,8 +127,10 @@ STUDENTS = [
         "priya@demo.local", "Priya Shah", "group-a",
         "Needle angle under time pressure", "simple-suturing",
         sessions=9, span=(3, 110), skill=(82, 54),
-        clarify_latest="The needle drop flagged near the end was me re-gripping on purpose, "
-        "not a drop — could you check the clip?",
+        appeal_latest=(
+            AppealReason.TIMING.value,
+            "I re-gripped the needle on purpose here; it never left the holder. Could you check the clip?",
+        ),
     ),
     StudentSpec(
         "lee@demo.local", "Lee Wong", "group-a",
@@ -233,6 +238,9 @@ def seed(database: Database, settings: Settings) -> None:
                 when = now - timedelta(days=d, hours=rng.randint(0, 8), minutes=rng.randint(0, 59))
                 with database.session() as db:
                     ts = TrainingSession(
+                        # Deterministic id: mock scores are seeded by session id, so this
+                        # keeps the demo data identical across reseeds.
+                        id=uuid.UUID(int=rng.getrandbits(128), version=4).hex,
                         user_id=user_id,
                         task_id=spec.task if rng.random() < 0.6 else rng.choice(task_ids),
                         status=SessionStatus.UPLOADED.value,
@@ -341,17 +349,12 @@ def _seed_reviews(
                     )
                 objection = content.get("studentObjection") or {}
                 if objection.get("submitted"):
-                    db.add(
-                        StudentFeedback(
-                            session_id=ts.id,
-                            student_id=user_id,
-                            kind=FeedbackKind.CLARIFY.value,
-                            message=objection.get("concernText", ""),
-                            referenced_clip=objection.get("referencedClip"),
-                            status=FeedbackStatus.OPEN.value,
-                            created_at=when + timedelta(hours=6),
-                        )
+                    clip_time = (objection.get("referencedClip") or "").split(" ")[0]
+                    event = next(
+                        (e for e in content.get("timeline", []) if e.get("time") == clip_time), None
                     )
+                    db.add(_appeal(ts, user_id, event, AppealReason.OCCLUDED.value,
+                                   objection.get("concernText", ""), when + timedelta(hours=6)))
                 continue
 
             age_days = (now - when).days
@@ -376,30 +379,42 @@ def _seed_reviews(
                         StudentFeedback(
                             session_id=ts.id,
                             student_id=user_id,
-                            kind=FeedbackKind.ACCEPT.value,
-                            status=FeedbackStatus.RESOLVED.value,
                             created_at=reviewed_at + timedelta(hours=5),
                         )
                     )
 
-        if spec.clarify_latest and sessions:
+        if spec.appeal_latest and sessions:
             latest = sessions[-1]
-            clip = next(
-                (c for c in latest.report.content.get("clips", []) if c.get("type") == "Error"),
-                None,
+            timeline = latest.report.content.get("timeline", [])
+            event = next((e for e in timeline if e.get("type") == "error"), None) or next(
+                (e for e in timeline if e.get("type") == "warning"), None
             )
-            db.add(
-                StudentFeedback(
-                    session_id=latest.id,
-                    student_id=user_id,
-                    kind=FeedbackKind.CLARIFY.value,
-                    message=spec.clarify_latest,
-                    referenced_clip=f"{clip['time']} - {clip['label']}" if clip else None,
-                    status=FeedbackStatus.OPEN.value,
-                    created_at=(latest.uploaded_at or latest.created_at) + timedelta(hours=4),
-                )
-            )
+            reason, message = spec.appeal_latest
+            db.add(_appeal(latest, user_id, event, reason, message,
+                           (latest.uploaded_at or latest.created_at) + timedelta(hours=4)))
         db.commit()
+
+
+def _appeal(
+    ts: TrainingSession,
+    user_id: int,
+    event: dict | None,
+    reason: str,
+    message: str,
+    when: datetime,
+) -> Appeal:
+    return Appeal(
+        session_id=ts.id,
+        student_id=user_id,
+        event_id=event.get("id") if event else None,
+        event_time_s=event_seconds(event) if event else None,
+        event_label=event.get("title") if event else None,
+        event_type=event.get("type") if event else None,
+        reason=reason,
+        message=message,
+        suggested_adjustment=SUGGESTED_ADJUSTMENT.get(event.get("type"), 0) if event else 0,
+        created_at=when,
+    )
 
 
 def _backdate(database: Database, session_id: str, when: datetime) -> None:

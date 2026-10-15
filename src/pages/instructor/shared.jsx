@@ -95,8 +95,8 @@ export function ReviewStateBadge({ state }) {
 
 const FEEDBACK_STATE = {
   accepted: { label: "Accepted", cls: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-  clarify_open: { label: "Clarification asked", cls: "bg-rose-50 text-rose-800 border-rose-200" },
-  clarify_resolved: { label: "Clarified", cls: "bg-slate-50 text-slate-700 border-slate-300" },
+  appeal_open: { label: "Appeal pending", cls: "bg-rose-50 text-rose-800 border-rose-200" },
+  appeal_decided: { label: "Appeal decided", cls: "bg-slate-50 text-slate-700 border-slate-300" },
 };
 
 export function FeedbackStateBadge({ state }) {

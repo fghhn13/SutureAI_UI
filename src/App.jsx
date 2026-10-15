@@ -5,6 +5,7 @@ import InstructorStudentPage from "./pages/instructor/InstructorStudentPage";
 import ReviewQueuePage from "./pages/instructor/ReviewQueuePage";
 import LoginPage from "./pages/LoginPage";
 import StudentDashboardPage from "./pages/StudentDashboardPage";
+import ReportPrintPage from "./pages/ReportPrintPage";
 import TrainingReportPage from "./pages/TrainingReportPage";
 import TrainingSessionPage from "./pages/TrainingSessionPage";
 
@@ -27,6 +28,7 @@ export default function App() {
       {/* Shared: students see their own reports, instructors their students'. */}
       <Route element={<ProtectedRoute />}>
         <Route path="/report" element={<TrainingReportPage />} />
+        <Route path="/report/print" element={<ReportPrintPage />} />
       </Route>
     </Routes>
   );

@@ -3,7 +3,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api, apiUrl } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import {
-  ClarificationPanel,
+  AppealBadge,
+  AppealForm,
+  AppealsPanel,
   InstructorReviewPanel,
   PersonalNoteCard,
   ReviewResultCard,
@@ -223,7 +225,8 @@ function RadarChart({ dimensions }) {
   );
 }
 
-function TimelineItem({ event, expanded, onToggle, onSeekToSeconds }) {
+function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canAppeal, onUpdated }) {
+  const [appealing, setAppealing] = useState(false);
   const colors = {
     normal: "bg-brand-500",
     warning: "bg-amber-500",
@@ -245,9 +248,19 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-medium text-slate-500">{event.time}</p>
-            <h4 className="text-sm font-semibold text-slate-800">{event.title}</h4>
+            <h4
+              className={`text-sm font-semibold ${
+                event.overturned ? "text-slate-400 line-through" : "text-slate-800"
+              }`}
+            >
+              {event.title}
+            </h4>
+            {event.overturned ? (
+              <p className="text-xs font-medium text-emerald-700">Overturned after the student's appeal</p>
+            ) : null}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {event.appeal ? <AppealBadge status={event.appeal.status} /> : null}
             <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
               {labels[event.type]}
             </span>
@@ -275,9 +288,29 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds }) {
             >
               {expanded ? "Collapse" : "Expand"}
             </button>
+            {canAppeal && !appealing ? (
+              <button
+                type="button"
+                onClick={() => setAppealing(true)}
+                className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+              >
+                Appeal
+              </button>
+            ) : null}
           </div>
         </div>
         {expanded && <p className="mt-3 text-sm text-slate-600">{event.detail}</p>}
+        {appealing ? (
+          <AppealForm
+            report={report}
+            eventId={event.id}
+            onCancel={() => setAppealing(false)}
+            onUpdated={(r) => {
+              setAppealing(false);
+              onUpdated(r);
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -431,7 +464,7 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated }) {
   );
 }
 
-function InstructorReportFeedbackSection({ data, onUpdated }) {
+function InstructorReportFeedbackSection({ data, onUpdated, onSeek }) {
   return (
     <section className="mt-6 surface-card surface-card-lift p-6">
       <h2 className="text-lg font-semibold text-slate-900">Report Feedback & Review</h2>
@@ -456,7 +489,7 @@ function InstructorReportFeedbackSection({ data, onUpdated }) {
           </div>
         </article>
 
-        <ClarificationPanel report={data} onUpdated={onUpdated} />
+        <AppealsPanel report={data} onUpdated={onUpdated} onSeek={onSeek} />
       </div>
 
       <div className="mt-4">
@@ -572,11 +605,13 @@ function TrainingReportPage() {
     setSearchParams({ session: id }, { replace: true });
   };
 
+  const reportKey = report?.meta?.sessionId ?? report?.recordedAt;
   useEffect(() => {
     if (!report?.timeline) return;
     setExpanded(defaultExpandedTimelineIds(report.timeline));
     setTimelineSectionOpen(true);
-  }, [report]);
+    // Only when a different report is opened, not on every update of this one.
+  }, [reportKey]);
 
   const completionLabel = report?.completed ? "Completed" : "Incomplete";
   const completionStyles = report?.completed
@@ -615,6 +650,7 @@ function TrainingReportPage() {
     const el = evidenceVideoRef.current;
     if (!el || typeof seconds !== "number" || Number.isNaN(seconds)) return;
     el.currentTime = Math.max(0, seconds);
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.play().catch(() => {});
   };
 
@@ -793,6 +829,18 @@ function TrainingReportPage() {
               ))}
             </select>
           </label>
+          <button
+            type="button"
+            onClick={() =>
+              window.open(
+                `${import.meta.env.BASE_URL.replace(/\/$/, "")}/report/print?session=${encodeURIComponent(selectedId)}&autoprint=1`,
+                "_blank",
+              )
+            }
+            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Export PDF
+          </button>
           {isStaff ? (
             <>
               <span className="hidden sm:inline text-slate-300">|</span>
@@ -853,6 +901,19 @@ function TrainingReportPage() {
                   {avgDimension}
                 </p>
               </div>
+              {report.scores && (report.scores.current !== report.scores.ai || report.scores.confirmedByInstructor) ? (
+                <p className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
+                  <span className="font-semibold">Current score {report.scores.current}</span>
+                  <span className="text-indigo-700">
+                    {" "}
+                    (AI {report.scores.ai}
+                    {report.scores.appealAdjustment
+                      ? `, ${report.scores.appealAdjustment > 0 ? "+" : ""}${report.scores.appealAdjustment} from accepted appeals`
+                      : ""}
+                    {report.scores.confirmedByInstructor ? ", confirmed by your instructor" : ""})
+                  </span>
+                </p>
+              ) : null}
               <span
                 className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${completionStyles}`}
               >
@@ -919,6 +980,14 @@ function TrainingReportPage() {
                   expanded={expanded.has(event.id)}
                   onToggle={() => toggleTimeline(event.id)}
                   onSeekToSeconds={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined}
+                  report={report}
+                  canAppeal={
+                    Boolean(report.meta?.canRespond) &&
+                    (event.type === "warning" || event.type === "error") &&
+                    !event.appeal &&
+                    (report.appeals?.length ?? 0) < (report.meta?.maxAppeals ?? 5)
+                  }
+                  onUpdated={setReport}
                 />
               ))}
             </div>
@@ -983,7 +1052,11 @@ function TrainingReportPage() {
       </section>
 
       {isStaff && viewMode === "instructor" ? (
-        <InstructorReportFeedbackSection data={report} onUpdated={setReport} />
+        <InstructorReportFeedbackSection
+          data={report}
+          onUpdated={setReport}
+          onSeek={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined}
+        />
       ) : (
         <StudentReportFeedbackReflectionSection
           data={isStaff ? { ...report, review: report.review?.status === "completed" ? report.review : null } : report}

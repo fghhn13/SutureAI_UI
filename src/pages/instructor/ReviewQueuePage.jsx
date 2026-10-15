@@ -12,7 +12,7 @@ import {
 
 const TABS = [
   { key: "pending", label: "To review", empty: "Every report has been reviewed." },
-  { key: "clarifications", label: "Student questions", empty: "No open clarification requests." },
+  { key: "appeals", label: "Appeals", empty: "No open appeals." },
   { key: "completed", label: "Reviewed", empty: "No reviewed reports yet." },
 ];
 
@@ -139,7 +139,7 @@ export default function ReviewQueuePage() {
                       </td>
                       <td className="py-3 text-right">
                         <Link to={reportLink(i.sessionId)} className="btn-primary inline-flex px-3 py-1.5 text-xs">
-                          {filter === "clarifications" ? "Respond" : filter === "completed" ? "Open" : "Review"}
+                          {filter === "appeals" ? "Decide" : filter === "completed" ? "Open" : "Review"}
                         </Link>
                       </td>
                     </tr>

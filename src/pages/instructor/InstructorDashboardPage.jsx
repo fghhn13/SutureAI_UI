@@ -15,7 +15,7 @@ const COLUMNS = [
   { key: "trend", label: "Trend" },
   { key: "change", label: "Change", sort: (r) => r.recentChange ?? 0 },
   { key: "weakest", label: "Weakest dimension", sort: (r) => r.weakestDimension ?? "~" },
-  { key: "pending", label: "To review", sort: (r) => -(r.pendingReviews + r.openClarifications) },
+  { key: "pending", label: "To review", sort: (r) => -(r.pendingReviews + r.openAppeals) },
 ];
 
 function AttentionList({ items }) {
@@ -139,9 +139,9 @@ function Roster({ students }) {
                   ) : (
                     <span className="text-xs text-slate-400">—</span>
                   )}
-                  {s.openClarifications ? (
+                  {s.openAppeals ? (
                     <span className="ml-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800">
-                      {s.openClarifications} question{s.openClarifications > 1 ? "s" : ""}
+                      {s.openAppeals} appeal{s.openAppeals > 1 ? "s" : ""}
                     </span>
                   ) : null}
                 </td>
@@ -251,10 +251,10 @@ export default function InstructorDashboardPage() {
               to={`/instructor/reviews?cohort=${encodeURIComponent(data.cohort.id)}`}
             />
             <StatTile
-              label="Open questions"
-              value={k.openClarifications}
-              hint="Student clarification requests →"
-              to={`/instructor/reviews?filter=clarifications&cohort=${encodeURIComponent(data.cohort.id)}`}
+              label="Open appeals"
+              value={k.openAppeals}
+              hint="Students disputing a finding →"
+              to={`/instructor/reviews?filter=appeals&cohort=${encodeURIComponent(data.cohort.id)}`}
             />
           </div>
 
@@ -262,7 +262,7 @@ export default function InstructorDashboardPage() {
             <section className="surface-card p-6 lg:col-span-2">
               <h2 className="text-lg font-semibold text-slate-900">Needs attention</h2>
               <p className="text-sm text-slate-600">
-                Questions, declining or low scores, inactivity and failed uploads.
+                Appeals, declining or low scores, inactivity and failed uploads.
               </p>
               <AttentionList items={data.attention} />
             </section>

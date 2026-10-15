@@ -1,4 +1,4 @@
-"""Instructor reviews, student feedback/clarifications, and the per-viewer report view."""
+"""Instructor reviews, student acceptance and appeals, and the per-viewer report view."""
 
 from __future__ import annotations
 
@@ -7,8 +7,9 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ..models import (
-    FeedbackKind,
-    FeedbackStatus,
+    Appeal,
+    AppealReason,
+    AppealStatus,
     InstructorReview,
     ReviewStatus,
     SessionStatus,
@@ -31,6 +32,11 @@ _LEGACY_KEYS = (
     "reviewStatus",
 )
 
+MAX_APPEALS_PER_REPORT = 5
+# Points suggested to the instructor when an appeal against an event is accepted.
+SUGGESTED_ADJUSTMENT = {"error": 4, "warning": 2}
+ADJUSTMENT_LIMIT = 20
+
 
 class ReviewError(ValueError):
     pass
@@ -38,6 +44,25 @@ class ReviewError(ValueError):
 
 def _iso(dt) -> str | None:
     return dt.isoformat() + "Z" if dt else None
+
+
+def event_seconds(event: dict[str, Any]) -> float | None:
+    """Seconds into the video for a timeline event (``timeSeconds`` or an "m:ss" label)."""
+    if isinstance(event.get("timeSeconds"), (int, float)):
+        return float(event["timeSeconds"])
+    try:
+        parts = [int(p) for p in str(event.get("time", "")).split(":")]
+    except ValueError:
+        return None
+    if len(parts) == 2:
+        return float(parts[0] * 60 + parts[1])
+    if len(parts) == 3:
+        return float(parts[0] * 3600 + parts[1] * 60 + parts[2])
+    return None
+
+
+def _clamp_score(v: int) -> int:
+    return max(0, min(100, v))
 
 
 def is_reviewed(ts: TrainingSession) -> bool:
@@ -48,9 +73,19 @@ def review_label(ts: TrainingSession) -> str:
     return "Reviewed" if is_reviewed(ts) else "Pending"
 
 
-def has_open_clarification(ts: TrainingSession) -> bool:
-    fb = ts.feedback
-    return fb is not None and fb.kind == FeedbackKind.CLARIFY.value and fb.status == FeedbackStatus.OPEN.value
+def open_appeals(ts: TrainingSession) -> list[Appeal]:
+    return [a for a in ts.appeals if a.status == AppealStatus.OPEN.value]
+
+
+def appeal_adjustment(ts: TrainingSession) -> int:
+    return sum(a.score_adjustment or 0 for a in ts.appeals if a.status == AppealStatus.ACCEPTED.value)
+
+
+def current_score(ts: TrainingSession) -> int:
+    """Score the student currently holds: the completed review's, else AI + accepted appeals."""
+    if is_reviewed(ts):
+        return ts.review.final_score
+    return _clamp_score(ts.report.overall_score + appeal_adjustment(ts))
 
 
 def review_out(review: InstructorReview | None) -> dict[str, Any] | None:
@@ -72,15 +107,25 @@ def review_out(review: InstructorReview | None) -> dict[str, Any] | None:
 def feedback_out(fb: StudentFeedback | None) -> dict[str, Any] | None:
     if fb is None:
         return None
+    return {"kind": fb.kind, "message": fb.message, "createdAt": _iso(fb.created_at)}
+
+
+def appeal_out(a: Appeal) -> dict[str, Any]:
     return {
-        "kind": fb.kind,
-        "message": fb.message,
-        "referencedClip": fb.referenced_clip,
-        "status": fb.status,
-        "createdAt": _iso(fb.created_at),
-        "response": fb.response,
-        "respondedBy": fb.responded_by.display_name if fb.responded_by else None,
-        "respondedAt": _iso(fb.responded_at),
+        "id": a.id,
+        "eventId": a.event_id,
+        "eventTime": a.event_time_s,
+        "eventLabel": a.event_label,
+        "eventType": a.event_type,
+        "reason": a.reason,
+        "message": a.message,
+        "status": a.status,
+        "suggestedAdjustment": a.suggested_adjustment,
+        "scoreAdjustment": a.score_adjustment,
+        "decisionNote": a.decision_note,
+        "decidedBy": a.decided_by.display_name if a.decided_by else None,
+        "decidedAt": _iso(a.decided_at),
+        "createdAt": _iso(a.created_at),
     }
 
 
@@ -92,6 +137,20 @@ def report_view(ts: TrainingSession, viewer: User) -> dict[str, Any]:
     # Students only see a review once it is completed; drafts stay with the instructor.
     review = ts.review if (viewer.is_staff or reviewed) else None
 
+    # Mark timeline events that were appealed; accepted appeals overturn the event.
+    by_event = {a.event_id: a for a in ts.appeals if a.event_id}
+    timeline = []
+    for e in content.get("timeline", []):
+        a = by_event.get(e.get("id"))
+        if a is not None:
+            e = {
+                **e,
+                "appeal": {"id": a.id, "status": a.status},
+                "overturned": a.status == AppealStatus.ACCEPTED.value,
+            }
+        timeline.append(e)
+    content["timeline"] = timeline
+
     content["student"] = ts.user.display_name
     content["status"] = "Reviewed" if reviewed else "Pending Instructor Review"
     highlights = dict(content.get("assessmentHighlights") or {})
@@ -101,7 +160,14 @@ def report_view(ts: TrainingSession, viewer: User) -> dict[str, Any]:
     content["assessmentHighlights"] = highlights
     content["review"] = review_out(review)
     content["feedback"] = feedback_out(ts.feedback)
+    content["appeals"] = [appeal_out(a) for a in ts.appeals]
     content["personalNote"] = (ts.note.note if ts.note else "") if is_owner else None
+    content["scores"] = {
+        "ai": ts.report.overall_score,
+        "appealAdjustment": appeal_adjustment(ts),
+        "current": current_score(ts),
+        "confirmedByInstructor": reviewed,
+    }
     content["meta"] = {
         "sessionId": ts.id,
         "studentId": ts.user_id,
@@ -110,6 +176,7 @@ def report_view(ts: TrainingSession, viewer: User) -> dict[str, Any]:
         "isOwner": is_owner,
         "canReview": viewer.is_staff,
         "canRespond": is_owner,
+        "maxAppeals": MAX_APPEALS_PER_REPORT,
     }
     return content
 
@@ -149,53 +216,122 @@ def save_review(
     return review
 
 
-def submit_feedback(
-    db: Session,
-    ts: TrainingSession,
-    student: User,
-    *,
-    kind: str,
-    message: str,
-    referenced_clip: str | None,
-) -> StudentFeedback:
+def accept_report(db: Session, ts: TrainingSession, student: User, *, message: str = "") -> StudentFeedback:
     _require_report(ts)
-    if kind not in {k.value for k in FeedbackKind}:
-        raise ReviewError("Unknown feedback kind.")
-    message = message.strip()
-    if kind == FeedbackKind.CLARIFY.value and not message:
-        raise ReviewError("Describe what you would like clarified.")
+    if open_appeals(ts):
+        raise ReviewError("Withdraw or wait for your open appeals before accepting the report.")
     fb = ts.feedback
-    if fb is not None and fb.response:
-        raise ReviewError("Your instructor has already responded to your feedback.")
     if fb is None:
         fb = StudentFeedback(session_id=ts.id, student_id=student.id)
         db.add(fb)
         ts.feedback = fb
-    fb.kind = kind
-    fb.message = message
-    fb.referenced_clip = (referenced_clip or "").strip()[:200] or None
-    fb.status = (
-        FeedbackStatus.OPEN.value if kind == FeedbackKind.CLARIFY.value else FeedbackStatus.RESOLVED.value
-    )
+    fb.kind = "accept"
+    fb.status = "resolved"
+    fb.message = message.strip()
     fb.created_at = utcnow()
     db.commit()
     return fb
 
 
-def respond_feedback(db: Session, ts: TrainingSession, instructor: User, *, response: str) -> StudentFeedback:
-    fb = ts.feedback
-    if fb is None or fb.kind != FeedbackKind.CLARIFY.value:
-        raise ReviewError("There is no clarification request on this report.")
-    response = response.strip()
-    if not response:
-        raise ReviewError("Write a response first.")
-    fb.response = response
-    fb.responded_by_id = instructor.id
-    fb.responded_by = instructor
-    fb.responded_at = utcnow()
-    fb.status = FeedbackStatus.RESOLVED.value
+def create_appeal(
+    db: Session,
+    ts: TrainingSession,
+    student: User,
+    *,
+    event_id: str | None,
+    reason: str,
+    message: str,
+) -> Appeal:
+    _require_report(ts)
+    if reason not in {r.value for r in AppealReason}:
+        raise ReviewError("Unknown appeal reason.")
+    message = message.strip()
+    if not message:
+        raise ReviewError("Explain why you are appealing.")
+    if len(ts.appeals) >= MAX_APPEALS_PER_REPORT:
+        raise ReviewError(f"A report can have at most {MAX_APPEALS_PER_REPORT} appeals.")
+
+    event = None
+    if event_id:
+        event = next((e for e in ts.report.content.get("timeline", []) if e.get("id") == event_id), None)
+        if event is None:
+            raise ReviewError("That event is not in this report.")
+        if any(a.event_id == event_id for a in ts.appeals):
+            raise ReviewError("You have already appealed this event.")
+    elif any(a.event_id is None for a in ts.appeals):
+        raise ReviewError("You have already appealed the report as a whole.")
+
+    appeal = Appeal(
+        session_id=ts.id,
+        student_id=student.id,
+        event_id=event_id,
+        event_time_s=event_seconds(event) if event else None,
+        event_label=event.get("title") if event else None,
+        event_type=event.get("type") if event else None,
+        reason=reason,
+        message=message,
+        suggested_adjustment=SUGGESTED_ADJUSTMENT.get(event.get("type"), 0) if event else 0,
+    )
+    db.add(appeal)
+    ts.appeals.append(appeal)
+    # A new disagreement supersedes an earlier "accept".
+    if ts.feedback is not None:
+        db.delete(ts.feedback)
+        ts.feedback = None
     db.commit()
-    return fb
+    return appeal
+
+
+def withdraw_appeal(db: Session, ts: TrainingSession, appeal_id: int) -> None:
+    appeal = _get_appeal(ts, appeal_id)
+    if appeal.status != AppealStatus.OPEN.value:
+        raise ReviewError("Only open appeals can be withdrawn.")
+    ts.appeals.remove(appeal)
+    db.delete(appeal)
+    db.commit()
+
+
+def decide_appeal(
+    db: Session,
+    ts: TrainingSession,
+    instructor: User,
+    appeal_id: int,
+    *,
+    accept: bool,
+    note: str,
+    score_adjustment: int | None,
+) -> Appeal:
+    """Accepting overturns the event and adjusts the score (also on a completed review)."""
+    appeal = _get_appeal(ts, appeal_id)
+    if appeal.status != AppealStatus.OPEN.value:
+        raise ReviewError("This appeal has already been decided.")
+    note = note.strip()
+    if not note:
+        raise ReviewError("Explain your decision to the student.")
+    if accept:
+        adj = appeal.suggested_adjustment if score_adjustment is None else score_adjustment
+        if abs(adj) > ADJUSTMENT_LIMIT:
+            raise ReviewError(f"Score adjustment must be between -{ADJUSTMENT_LIMIT} and {ADJUSTMENT_LIMIT}.")
+        appeal.status = AppealStatus.ACCEPTED.value
+        appeal.score_adjustment = adj
+        if is_reviewed(ts):
+            ts.review.final_score = _clamp_score(ts.review.final_score + adj)
+    else:
+        appeal.status = AppealStatus.REJECTED.value
+        appeal.score_adjustment = 0
+    appeal.decision_note = note
+    appeal.decided_by_id = instructor.id
+    appeal.decided_by = instructor
+    appeal.decided_at = utcnow()
+    db.commit()
+    return appeal
+
+
+def _get_appeal(ts: TrainingSession, appeal_id: int) -> Appeal:
+    appeal = next((a for a in ts.appeals if a.id == appeal_id), None)
+    if appeal is None:
+        raise ReviewError("Appeal not found.")
+    return appeal
 
 
 def save_note(db: Session, ts: TrainingSession, note: str) -> StudentNote:

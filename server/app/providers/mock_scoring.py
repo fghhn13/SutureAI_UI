@@ -11,7 +11,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from .base import ScoringContext
+from .base import SCORING_STAGES, ScoringContext, run_stages
 from .dimensions import DIMENSIONS
 
 
@@ -29,8 +29,7 @@ class MockScoringProvider:
         self.skill_fn = skill_fn
 
     def score(self, ctx: ScoringContext) -> dict[str, Any]:
-        if self.delay_s > 0:
-            time.sleep(self.delay_s)
+        run_stages(ctx.progress, SCORING_STAGES, self.delay_s, time.sleep)
 
         rng = random.Random(ctx.session_id)
         duration = ctx.duration_s if ctx.duration_s and ctx.duration_s > 0 else rng.uniform(85, 150)

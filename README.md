@@ -1,18 +1,20 @@
 # SutureAI · Training Report Dashboard
 
-快速上手请阅 **[QUICKSTART.md](./QUICKSTART.md)**：本地一条命令 `npm start` 即可同时启动前后端（首次运行会自动安装依赖）。
+快速上手请阅 **[QUICKSTART.md](./QUICKSTART.md)**：本地一条命令 `npm start` 即可同时启动前后端（首次运行会自动安装依赖）。现场演示请按 **[docs/demo-script.md](./docs/demo-script.md)** 操作。
 
 SutureAI 缝合技能训练平台：学生上传训练录像 → 视频评分 → 生成报告 → 教师查看全班状况并评审 → 学生查看评审、提出疑问。前端是 React（Vite），后端是 FastAPI + SQLite（`server/`）。
 
 ## 功能概览
 
-- **开始训练（`/train`）**：选择任务 → 上传录像（拖拽、预览、读取时长、进度条、可取消）→ 实时显示处理进度 → 完成后跳转报告；失败可重试
+- **开始训练（`/train`）**：选择任务 → 上传录像（拖拽、预览、读取时长、进度条、可取消）→ 分析进度页（7 个阶段、百分比与剩余时间、实时滚动的分析动态）→ 完成后自动打开报告；失败可重试
+- **演示视频**：登记过的演示视频（按 SHA-256 识别）按人工标注生成报告，时间戳与视频内容一致；见下文「演示视频」
 - **学生主页（`/`）**：当前任务、最近报告、趋势、练习重点、通知、进行中的录像、训练日历与历史，全部由 `GET /api/dashboard` 从数据库聚合
 - **报告页（`/report`）**：综合得分、五维评分与雷达图、时间轴（可跳转回放上传的视频）、重点片段、评价与建议
-  - 学生：查看教师评审（最终分数、评语、教学重点），**接受反馈**或针对某个片段**请求澄清**，写仅自己可见的个人笔记
-  - 教师：确认/调整分数（自动标注与 AI 的一致程度）、写评语、选教学重点，存草稿或完成评审；回复学生的澄清请求；可切换「学生看到的样子」预览
+  - 学生：查看教师评审（最终分数、评语、教学重点）；**接受报告**，或在时间轴上对某个警告/问题判定**提出申诉**（选择理由并说明），也可以对整份报告申诉；写仅自己可见的个人笔记
+  - 教师：确认/调整分数（自动标注与 AI 的一致程度）、写评语、选教学重点，存草稿或完成评审；**裁决申诉**（可直接跳转到对应的视频片段）——采纳后该判定在时间轴上标为已撤销，分数按调整值自动修改（默认建议：问题 +4、警告 +2，可修改）；可切换「学生看到的样子」预览
+  - **导出 PDF**：打印版式，时间轴每个事件附带对应时刻的视频截图，并包含申诉记录与教师评审，用于归档
 - **教师端（`/instructor`）**
-  - **班级总览**：按班级切换；KPI（学生数、本周训练次数、30 天平均分、待评审、待回复问题）；**需要关注**列表（澄清请求、成绩下滑、低分、长期未训练、处理失败，按严重程度排序）；学生 × 五维的**技能热力图**；可排序、可搜索的**学生名单**（最近活跃、训练次数、最新分、趋势小折线、变化、最弱维度、待办）
+  - **班级总览**：按班级切换；KPI（学生数、本周训练次数、30 天平均分、待评审、待处理申诉）；**需要关注**列表（待处理申诉、成绩下滑、低分、长期未训练、处理失败，按严重程度排序）；学生 × 五维的**技能热力图**；可排序、可搜索的**学生名单**（最近活跃、训练次数、最新分、趋势小折线、变化、最弱维度、待办）
   - **学生详情**（`/instructor/students/:id`）：总分趋势图（点击打开对应报告）、五个维度的趋势小图、全部训练记录及评审/反馈状态、训练日历
   - **评审队列**（`/instructor/reviews`）：待评审 / 学生提问 / 已评审 三个标签，可按班级筛选，最早的排在前面
 - **登录**：服务端会话（httpOnly cookie），密码 scrypt 哈希存储；登录后按角色进入学生主页或教师端
@@ -46,10 +48,20 @@ created → uploaded → scoring → scored → generating → ready
 
 | 步骤 | 接口 | 当前实现 | 切换方式 |
 |------|------|----------|----------|
-| 视频评分 | `ScoringProvider.score(ctx) -> dict` | `MockScoringProvider`（按 session id 生成确定性的假数据，不看视频内容） | 新增 provider，在 `providers/__init__.py` 注册，设置 `SUTURE_SCORING_PROVIDER` |
+| 视频评分 | `ScoringProvider.score(ctx) -> dict` | `DemoScoringProvider`：登记过的演示视频返回人工标注；其他视频交给 `MockScoringProvider`（按 session id 生成确定性的假数据，不看视频内容） | 新增 provider，在 `providers/__init__.py` 注册，设置 `SUTURE_SCORING_PROVIDER` |
 | 报告生成 | `ReportProvider.generate(ctx) -> dict` | `TemplateReportProvider`（规则模板） | 同上，`SUTURE_REPORT_PROVIDER` |
 
 - 评分输出格式（schemaVersion 1）写在 `providers/base.py` 的文档字符串里。真实 API 的 adapter 负责转换成这个格式。
+- provider 通过 `ctx.progress(fraction, stage)` 汇报进度，阶段名见 `providers/base.py` 的 `STAGES`；进度页显示的就是这些阶段。
+
+### 演示视频
+
+在评分 API 接入之前，用人工标注的演示视频完整演示整个流程：
+
+- `server/demo/registry.json` 登记演示视频（SHA-256 列表，另有文件名作为后备匹配）和对应的标注文件。
+- `server/demo/suture-demo-1.json` 是标注本身：采用评分输出格式，内容按 `docs/视频戳.md` 整理；可选的 `narrative` 字段提供人工撰写的总结、建议和各维度说明。
+- 登记视频：`npm run demo:register -- <视频>`；检查某个文件能否被识别：在 `server/` 下运行 `python -m app.demo check <视频>`。
+- 每次演示前重置数据：`npm run demo:reset`。完整操作步骤见 [docs/demo-script.md](./docs/demo-script.md)。
 - 报告输出格式就是报告页渲染的 JSON，样例见 `server/seed/reports/*.json`。
 
 ## 数据库表
@@ -67,12 +79,15 @@ created → uploaded → scoring → scored → generating → ready
 | `scoring_results` | 评分 provider 的原始输出 |
 | `reports` | 最终报告 JSON（生成后不再修改） |
 | `instructor_reviews` | 教师评审：草稿/已完成、AI 分、最终分、评语、教学重点 |
-| `student_feedback` | 学生对报告的回应：接受 / 请求澄清（含引用片段）及教师回复 |
+| `student_feedback` | 学生接受了报告 |
+| `appeals` | 学生对某个时间轴事件（或整份报告）的申诉：理由、说明、事件快照；教师的裁决（采纳/驳回）、分数调整与理由 |
 | `student_notes` | 学生的私人笔记（教师不可见） |
 
 评审、反馈和笔记不写进报告 JSON，而是在 `GET /api/reports/:id` 时按查看者合并进去（`services/reviews.py` 的 `report_view`）：学生看不到教师的草稿，教师看不到学生的笔记。
 
 目前用 `create_all` 建表（只会新建缺失的表，不会改已有表）；表结构稳定后建议接入 Alembic 做迁移。
+
+启动时会自动给旧数据库补上新增的**可空**列（`db.py` 的 `_add_missing_columns`）。
 
 > **从旧版本升级**：本地已有的 `data/app.db` 里没有班级和教师数据，启动时日志会提示。在 `server/` 目录下执行 `.\.venv\Scripts\python -m app.seed --reset` 重建演示数据（会清空本地数据库和已上传的视频）。
 
@@ -91,20 +106,22 @@ created → uploaded → scoring → scored → generating → ready
 | GET | `/api/reports` | 我的报告列表；教师可传 `?studentId=` 查看所带学生的 |
 | GET | `/api/reports/:sessionId` | 报告内容（按查看者合并评审、反馈、笔记） |
 | PUT | `/api/reports/:sessionId/review` | 教师：保存草稿或完成评审 `{ finalScore, comment, teachingFocus, complete }` |
-| POST | `/api/reports/:sessionId/feedback` | 学生：`{ kind: "accept" \| "clarify", message, referencedClip }` |
-| POST | `/api/reports/:sessionId/feedback/response` | 教师：回复澄清请求 `{ response }` |
+| POST | `/api/reports/:sessionId/accept` | 学生：接受报告 `{ message? }`（有未处理的申诉时不能接受） |
+| POST | `/api/reports/:sessionId/appeals` | 学生：提出申诉 `{ eventId?, reason: misdetected\|occluded\|timing\|other, message }`；不传 `eventId` 表示对整份报告申诉；每份报告最多 5 条 |
+| DELETE | `/api/reports/:sessionId/appeals/:id` | 学生：撤回尚未处理的申诉 |
+| POST | `/api/reports/:sessionId/appeals/:id/decision` | 教师：`{ decision: accept\|reject, note, scoreAdjustment? }`；采纳后撤销该判定并调整分数（已完成的评审也会同步调整） |
 | PUT | `/api/reports/:sessionId/note` | 学生：私人笔记 `{ note }` |
 | GET | `/api/dashboard` | 学生主页聚合数据 |
 | GET | `/api/instructor/cohorts` | 教师所带班级 |
 | GET | `/api/instructor/cohorts/:id` | 班级总览：KPI、需要关注、热力图、学生名单 |
 | GET | `/api/instructor/students/:id` | 学生详情：统计、分数序列、各维度序列、训练记录、日历 |
-| GET | `/api/instructor/reviews` | 评审队列 `?filter=pending\|clarifications\|completed&cohortId=` |
+| GET | `/api/instructor/reviews` | 评审队列 `?filter=pending\|appeals\|completed&cohortId=` |
 
 后端运行时可在 http://127.0.0.1:8000/docs 查看自动生成的 OpenAPI 文档。
 
 **权限**：学生只能访问自己的数据；教师只能访问**自己所带班级**里的学生（其他学生的会话一律返回 404）；`admin` 可访问全部。规则集中在 `services/access.py`。
 
-**「需要关注」的判定规则**（`services/instructor.py` 顶部的常量可调）：有未回复的澄清请求（高）；最近 3 次平均分比之前 3 次低 8 分以上（高）；最新分数低于 60（中）；14 天以上没有训练或从未训练（中）；有处理失败的录像（低）。
+**「需要关注」的判定规则**（`services/instructor.py` 顶部的常量可调）：有待处理的申诉（高）；最近 3 次平均分比之前 3 次低 8 分以上（高）；最新分数低于 60（中）；14 天以上没有训练或从未训练（中）；有处理失败的录像（低）。
 
 ## 路由
 
@@ -117,11 +134,12 @@ created → uploaded → scoring → scored → generating → ready
 | `/report?session=<sessionId>` | 单次训练报告（学生看自己的，教师看所带学生的） |
 | `/instructor` | 教师端班级总览；`?cohort=<id>` 选班级 |
 | `/instructor/students/:studentId` | 教师端学生详情 |
-| `/instructor/reviews` | 评审队列；`?filter=clarifications\|completed&cohort=<id>` |
+| `/instructor/reviews` | 评审队列；`?filter=appeals\|completed&cohort=<id>` |
+| `/report/print?session=<id>` | 报告打印版（「Export PDF」打开此页，用浏览器另存为 PDF） |
 
 ### 演示账号（本地原型，非生产）
 
-首次启动后端时如果数据库为空，会自动写入演示数据（`server/app/seed.py`）：3 个任务、2 个班级、2 名教师、7 名学生。学生的历史记录用真实流水线（mock 评分 + 模板报告）生成，并按设定的成绩曲线分布，让教师端有可看的差异；较早的报告大多已评审，部分已被学生接受，另有几条未回复的澄清请求。
+首次启动后端时如果数据库为空，会自动写入演示数据（`server/app/seed.py`）：3 个任务、2 个班级、2 名教师、7 名学生。学生的历史记录用真实流水线（mock 评分 + 模板报告）生成，并按设定的成绩曲线分布，让教师端有可看的差异；较早的报告大多已评审，部分已被学生接受，另有几条待处理的申诉。
 
 所有账号密码都是 `suture-local-demo`。
 
@@ -129,9 +147,9 @@ created → uploaded → scoring → scored → generating → ready
 |----------|------|------|
 | `chen@demo.local` | 教师 | 带 Group A 和 Group B |
 | `patel@demo.local` | 教师 | 只带 Group B（用来验证教师只能看到自己的班） |
-| `alex@demo.local` | 学生 · A | 稳步提升；含 3 份手写样例报告（其中一份有未回复的澄清请求） |
+| `alex@demo.local` | 学生 · A | 稳步提升；含 3 份手写样例报告（其中一份有待处理的申诉） |
 | `sam@demo.local` | 学生 · A | 进步明显 |
-| `priya@demo.local` | 学生 · A | 成绩下滑，最新一份报告有澄清请求 |
+| `priya@demo.local` | 学生 · A | 成绩下滑，最新一份报告有待处理的申诉 |
 | `lee@demo.local` | 学生 · A | 40 多天没有训练 |
 | `jordan@demo.local` | 学生 · B | 记录较少 |
 | `mia@demo.local` | 学生 · B | 分数偏低，有一条处理失败的录像 |
@@ -149,8 +167,11 @@ created → uploaded → scoring → scored → generating → ready
 | `SUTURE_MAX_UPLOAD_MB` | `1024` | 单个视频上限 |
 | `SUTURE_SESSION_TTL_HOURS` | `168` | 登录有效期 |
 | `SUTURE_COOKIE_SECURE` | `0` | HTTPS 部署时设为 `1` |
-| `SUTURE_SCORING_PROVIDER` / `SUTURE_REPORT_PROVIDER` | `mock` / `template` | provider 选择 |
-| `SUTURE_MOCK_SCORING_DELAY_S` / `SUTURE_MOCK_REPORT_DELAY_S` | `4` / `2` | mock 的模拟耗时，方便观察进度界面 |
+| `SUTURE_SCORING_PROVIDER` / `SUTURE_REPORT_PROVIDER` | `demo` / `template` | provider 选择 |
+| `SUTURE_DEMO_DIR` | `server/demo` | 演示视频登记表与标注文件所在目录 |
+| `SUTURE_DEMO_ANALYSIS_S` | `24` | 演示视频分析阶段的时长（秒） |
+| `SUTURE_DEMO_FALLBACK` | `mock` | 未登记视频的处理方式：`mock`，或 `reject`（报错） |
+| `SUTURE_MOCK_SCORING_DELAY_S` / `SUTURE_MOCK_REPORT_DELAY_S` | `4` / `4` | mock 的模拟耗时，方便观察进度界面 |
 | `SUTURE_WORKER_ENABLED` | `1` | 是否在 API 进程内启动 worker |
 
 前端开发服务器把 `/api` 代理到 `SUTURE_API_URL`（默认 `http://127.0.0.1:8000`），见 `vite.config.js`。

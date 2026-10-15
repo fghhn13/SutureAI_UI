@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from pydantic.alias_generators import to_camel
@@ -51,6 +52,8 @@ class SessionOut(ApiModel):
     id: str
     status: str
     error: str | None
+    progress: float | None
+    stage: str | None
     task: TaskOut
     video: VideoOut | None
     overall_score: int | None
@@ -78,14 +81,20 @@ class ReviewIn(ApiModel):
     complete: bool = False
 
 
-class FeedbackIn(ApiModel):
-    kind: str
-    message: str = Field(default="", max_length=5000)
-    referenced_clip: str | None = None
+class AcceptIn(ApiModel):
+    message: str = Field(default="", max_length=2000)
 
 
-class FeedbackResponseIn(ApiModel):
-    response: str = Field(max_length=5000)
+class AppealIn(ApiModel):
+    event_id: str | None = None  # None = the report as a whole
+    reason: str
+    message: str = Field(max_length=5000)
+
+
+class AppealDecisionIn(ApiModel):
+    decision: Literal["accept", "reject"]
+    note: str = Field(max_length=5000)
+    score_adjustment: int | None = None  # accept only; defaults to the suggested value
 
 
 class NoteIn(ApiModel):

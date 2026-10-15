@@ -35,6 +35,7 @@ def load_sessions(db: Session, user_ids: list[int]) -> list[TrainingSession]:
                 selectinload(TrainingSession.scoring),
                 selectinload(TrainingSession.review).selectinload(InstructorReview.instructor),
                 selectinload(TrainingSession.feedback),
+                selectinload(TrainingSession.appeals),
             )
             .order_by(TrainingSession.created_at)
         )
@@ -173,11 +174,14 @@ def _notifications(
     ]
     if reviewed:
         notes.append(f"Your instructor reviewed {len(reviewed)} report(s) this week.")
-    replied = [
-        s for s in ready if s.feedback and s.feedback.responded_at and s.feedback.responded_at >= week_ago
+    decided = [
+        a for s in ready for a in s.appeals if a.decided_at and a.decided_at >= week_ago
     ]
-    if replied:
-        notes.append(f"Your instructor answered {len(replied)} clarification request(s).")
+    if decided:
+        accepted = sum(1 for a in decided if a.status == "accepted")
+        notes.append(
+            f"Your instructor decided {len(decided)} appeal(s) this week ({accepted} accepted)."
+        )
     pending_review = [s for s in ready if review_label(s) == "Pending"]
     if pending_review:
         notes.append(f"{len(pending_review)} report(s) are waiting for instructor review.")

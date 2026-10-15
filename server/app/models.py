@@ -140,6 +140,10 @@ class TrainingSession(Base):
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
     uploaded_at: Mapped[datetime | None]
     finished_at: Mapped[datetime | None]
+    # Live processing progress for the UI: overall fraction 0..1 and the current stage key
+    # (see providers.base.STAGES).
+    progress: Mapped[float | None] = mapped_column(Float)
+    stage: Mapped[str | None] = mapped_column(String(40))
 
     user: Mapped[User] = relationship()
     task: Mapped[Task] = relationship()
@@ -149,6 +153,9 @@ class TrainingSession(Base):
     review: Mapped[InstructorReview | None] = relationship(back_populates="session", uselist=False)
     feedback: Mapped[StudentFeedback | None] = relationship(back_populates="session", uselist=False)
     note: Mapped[StudentNote | None] = relationship(uselist=False)
+    appeals: Mapped[list[Appeal]] = relationship(
+        back_populates="session", order_by="Appeal.created_at", cascade="all, delete-orphan"
+    )
 
 
 class Video(Base):
@@ -239,18 +246,8 @@ class InstructorReview(Base):
         return "adjusted" if diff <= 10 else "override"
 
 
-class FeedbackKind(str, enum.Enum):
-    ACCEPT = "accept"
-    CLARIFY = "clarify"
-
-
-class FeedbackStatus(str, enum.Enum):
-    OPEN = "open"  # clarification waiting for the instructor
-    RESOLVED = "resolved"
-
-
 class StudentFeedback(Base):
-    """Student's response to a report: accept it, or ask for clarification (one per session)."""
+    """Student accepted the report (one per session). Disagreements are Appeals."""
 
     __tablename__ = "student_feedback"
 
@@ -259,17 +256,55 @@ class StudentFeedback(Base):
         ForeignKey("training_sessions.id", ondelete="CASCADE"), unique=True
     )
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    kind: Mapped[str] = mapped_column(String(20))
+    kind: Mapped[str] = mapped_column(String(20), default="accept")
     message: Mapped[str] = mapped_column(Text, default="")
-    referenced_clip: Mapped[str | None] = mapped_column(String(200))
-    status: Mapped[str] = mapped_column(String(20))
+    status: Mapped[str] = mapped_column(String(20), default="resolved")
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
-    response: Mapped[str | None] = mapped_column(Text)
-    responded_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
-    responded_at: Mapped[datetime | None]
 
     session: Mapped[TrainingSession] = relationship(back_populates="feedback")
-    responded_by: Mapped[User | None] = relationship(foreign_keys=[responded_by_id])
+
+
+class AppealReason(str, enum.Enum):
+    MISDETECTED = "misdetected"  # the event did not happen
+    OCCLUDED = "occluded"  # view was blocked, so the call is unreliable
+    TIMING = "timing"  # happened, but at a different time / was intentional
+    OTHER = "other"
+
+
+class AppealStatus(str, enum.Enum):
+    OPEN = "open"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
+class Appeal(Base):
+    """A student disputes one timeline event (or the report as a whole); an instructor
+    accepts it (the event is overturned and the score adjusted) or rejects it."""
+
+    __tablename__ = "appeals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("training_sessions.id", ondelete="CASCADE"), index=True
+    )
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    # Snapshot of the disputed timeline event; all None for a whole-report appeal.
+    event_id: Mapped[str | None] = mapped_column(String(40))
+    event_time_s: Mapped[float | None] = mapped_column(Float)
+    event_label: Mapped[str | None] = mapped_column(String(200))
+    event_type: Mapped[str | None] = mapped_column(String(20))
+    reason: Mapped[str] = mapped_column(String(20))
+    message: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(20), default=AppealStatus.OPEN.value, index=True)
+    suggested_adjustment: Mapped[int] = mapped_column(Integer, default=0)
+    score_adjustment: Mapped[int | None] = mapped_column(Integer)
+    decision_note: Mapped[str | None] = mapped_column(Text)
+    decided_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    decided_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+    session: Mapped[TrainingSession] = relationship(back_populates="appeals")
+    decided_by: Mapped[User | None] = relationship(foreign_keys=[decided_by_id])
 
 
 class StudentNote(Base):

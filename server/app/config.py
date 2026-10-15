@@ -33,15 +33,24 @@ class Settings:
     # Uploads
     max_upload_mb: int = field(default_factory=lambda: int(_env("MAX_UPLOAD_MB", "1024")))
 
-    # Pipeline providers: "mock" | (future) "http"  /  "template" | (future) "llm"
-    scoring_provider: str = field(default_factory=lambda: _env("SCORING_PROVIDER", "mock"))
+    # Pipeline providers: "demo" (registered demo videos, else fallback) | "mock" |
+    # (future) "http"  /  "template" | (future) "llm"
+    scoring_provider: str = field(default_factory=lambda: _env("SCORING_PROVIDER", "demo"))
     report_provider: str = field(default_factory=lambda: _env("REPORT_PROVIDER", "template"))
     mock_scoring_delay_s: float = field(
         default_factory=lambda: float(_env("MOCK_SCORING_DELAY_S", "4"))
     )
     mock_report_delay_s: float = field(
-        default_factory=lambda: float(_env("MOCK_REPORT_DELAY_S", "2"))
+        default_factory=lambda: float(_env("MOCK_REPORT_DELAY_S", "4"))
     )
+
+    # Demo recordings (providers/demo.py)
+    demo_dir: Path = field(
+        default_factory=lambda: Path(_env("DEMO_DIR", str(REPO_ROOT / "server" / "demo")))
+    )
+    demo_analysis_s: float = field(default_factory=lambda: float(_env("DEMO_ANALYSIS_S", "24")))
+    # What to do with uploads that are not registered demo videos: "mock" | "reject"
+    demo_fallback: str = field(default_factory=lambda: _env("DEMO_FALLBACK", "mock"))
 
     # Background worker
     worker_enabled: bool = field(default_factory=lambda: _env_bool("WORKER_ENABLED", True))

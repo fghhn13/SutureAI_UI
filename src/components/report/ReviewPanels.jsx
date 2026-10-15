@@ -93,18 +93,26 @@ function FocusChips({ value, onChange, suggestions }) {
 export function InstructorReviewPanel({ report, onUpdated }) {
   const ai = report.meta.aiScore;
   const review = report.review;
-  const [finalScore, setFinalScore] = useState(review?.finalScore ?? ai);
+  const startScore = review?.finalScore ?? report.scores?.current ?? ai;
+  const [finalScore, setFinalScore] = useState(startScore);
   const [comment, setComment] = useState(review?.comment ?? "");
   const [focus, setFocus] = useState(review?.teachingFocus ?? []);
   const [savedMsg, setSavedMsg] = useState(null);
   const { busy, error, run } = useAction();
 
   useEffect(() => {
-    setFinalScore(review?.finalScore ?? ai);
+    setFinalScore(startScore);
     setComment(review?.comment ?? "");
     setFocus(review?.teachingFocus ?? []);
     setSavedMsg(null);
   }, [report.meta.sessionId]);
+
+  // Until a review exists, follow score changes from decided appeals so that completing
+  // the review doesn't silently undo an accepted appeal.
+  const current = report.scores?.current;
+  useEffect(() => {
+    if (!review && current != null) setFinalScore(current);
+  }, [current, review]);
 
   const scoreValid = Number.isInteger(finalScore) && finalScore >= 0 && finalScore <= 100;
   const completed = review?.status === "completed";
@@ -201,70 +209,215 @@ export function InstructorReviewPanel({ report, onUpdated }) {
   );
 }
 
-/** Instructor: the student's accept/clarify response and the reply box. */
-export function ClarificationPanel({ report, onUpdated }) {
-  const fb = report.feedback;
-  const [response, setResponse] = useState("");
+export const APPEAL_REASONS = [
+  { value: "misdetected", label: "This didn't happen" },
+  { value: "occluded", label: "The view was blocked" },
+  { value: "timing", label: "Intentional / wrong moment" },
+  { value: "other", label: "Other" },
+];
+
+const REASON_LABEL = Object.fromEntries(APPEAL_REASONS.map((r) => [r.value, r.label]));
+
+function clock(seconds) {
+  if (seconds == null) return null;
+  const t = Math.round(seconds);
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+}
+
+/** Status chip for an appeal: icon + text, never colour alone. */
+export function AppealBadge({ status, adjustment }) {
+  const styles = {
+    open: ["border-amber-200 bg-amber-50 text-amber-900", "●", "Appeal pending"],
+    accepted: [
+      "border-emerald-200 bg-emerald-50 text-emerald-800",
+      "✓",
+      `Appeal accepted${adjustment ? ` · ${adjustment > 0 ? "+" : ""}${adjustment}` : ""}`,
+    ],
+    rejected: ["border-slate-300 bg-slate-50 text-slate-700", "✕", "Appeal rejected"],
+  };
+  const [cls, icon, text] = styles[status] ?? styles.open;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${cls}`}>
+      <span aria-hidden>{icon}</span>
+      {text}
+    </span>
+  );
+}
+
+/** Student: dispute one timeline event (eventId) or, with eventId null, the whole report. */
+export function AppealForm({ report, eventId, onUpdated, onCancel }) {
+  const [reason, setReason] = useState(eventId ? "misdetected" : "other");
+  const [message, setMessage] = useState("");
   const { busy, error, run } = useAction();
 
-  async function send() {
+  async function submit() {
     const updated = await run(() =>
-      api(`/reports/${report.meta.sessionId}/feedback/response`, { method: "POST", body: { response } }),
+      api(`/reports/${report.meta.sessionId}/appeals`, {
+        method: "POST",
+        body: { eventId: eventId ?? null, reason, message },
+      }),
     );
-    if (updated) {
-      onUpdated(updated);
-      setResponse("");
-    }
+    if (updated) onUpdated(updated);
   }
 
   return (
+    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm">
+      <p className="font-semibold text-slate-800">
+        {eventId ? "Appeal this finding" : "Appeal the whole report"}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Reason">
+        {APPEAL_REASONS.filter((r) => eventId || r.value === "other" || r.value === "occluded").map((r) => (
+          <button
+            key={r.value}
+            type="button"
+            role="radio"
+            aria-checked={reason === r.value}
+            onClick={() => setReason(r.value)}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+              reason === r.value
+                ? "border-brand-500 bg-brand-600 text-white"
+                : "border-slate-300 bg-white text-slate-700 hover:border-brand-300"
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder="Explain what really happened at this moment."
+        className="mt-2 h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2"
+      />
+      <div className="mt-2 flex gap-2">
+        <button type="button" disabled={busy || !message.trim()} onClick={submit} className="btn-primary px-4 py-1.5">
+          Send appeal
+        </button>
+        <button type="button" onClick={onCancel} className="btn-secondary px-4 py-1.5">
+          Cancel
+        </button>
+      </div>
+      <ErrorLine error={error} />
+    </div>
+  );
+}
+
+/** Instructor: decide each appeal (accept → event overturned + score adjusted, or reject). */
+export function AppealsPanel({ report, onUpdated, onSeek }) {
+  const appeals = [...(report.appeals ?? [])].sort(
+    (a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1),
+  );
+  const fb = report.feedback;
+
+  return (
     <article className="rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Student response</h3>
-      {!fb ? (
-        <p className="mt-3 text-sm text-slate-600">The student has not responded to this report yet.</p>
-      ) : fb.kind === "accept" ? (
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Student appeals</h3>
+      {fb?.kind === "accept" ? (
         <p className="mt-3 text-sm text-slate-700">
-          <span className="font-semibold text-emerald-700">✓ Accepted</span> the feedback on {fmt(fb.createdAt)}.
+          <span className="font-semibold text-emerald-700">✓ Accepted</span> the report on {fmt(fb.createdAt)}.
           {fb.message ? <span className="mt-1 block text-slate-600">“{fb.message}”</span> : null}
         </p>
-      ) : (
-        <div className="mt-3 space-y-3 text-sm">
-          <p>
-            <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${fb.status === "open" ? "border-rose-200 bg-rose-50 text-rose-800" : "border-slate-300 bg-slate-50 text-slate-700"}`}>
-              {fb.status === "open" ? "Clarification requested" : "Answered"}
-            </span>{" "}
-            <span className="text-xs text-slate-500">{fmt(fb.createdAt)}</span>
-          </p>
-          <blockquote className="rounded-lg border-l-4 border-slate-300 bg-slate-50 px-3 py-2 text-slate-800">{fb.message}</blockquote>
-          {fb.referencedClip ? (
-            <p className="text-xs text-slate-600">
-              Referenced clip: <span className="font-medium">{fb.referencedClip}</span>
-            </p>
-          ) : null}
-          {fb.response ? (
-            <div className="rounded-lg bg-indigo-50 px-3 py-2">
-              <p className="text-xs text-indigo-700">
-                {fb.respondedBy} replied {fmt(fb.respondedAt)}
-              </p>
-              <p className="mt-1 text-slate-800">{fb.response}</p>
-            </div>
-          ) : (
-            <>
-              <textarea
-                value={response}
-                onChange={(e) => setResponse(e.target.value)}
-                placeholder="Explain what the system saw, and whether you adjusted the score."
-                className="h-24 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2"
+      ) : null}
+      {!appeals.length && !fb ? (
+        <p className="mt-3 text-sm text-slate-600">The student has not responded to this report yet.</p>
+      ) : null}
+      <ul className="mt-3 space-y-3">
+        {appeals.map((a) => (
+          <AppealDecisionItem key={a.id} report={report} appeal={a} onUpdated={onUpdated} onSeek={onSeek} />
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
+  const [decision, setDecision] = useState("accept");
+  const [adjustment, setAdjustment] = useState(a.suggestedAdjustment);
+  const [note, setNote] = useState("");
+  const { busy, error, run } = useAction();
+
+  async function submit() {
+    const updated = await run(() =>
+      api(`/reports/${report.meta.sessionId}/appeals/${a.id}/decision`, {
+        method: "POST",
+        body: { decision, note, scoreAdjustment: decision === "accept" ? adjustment : null },
+      }),
+    );
+    if (updated) onUpdated(updated);
+  }
+
+  return (
+    <li className="rounded-lg border border-slate-200 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        {a.eventTime != null && onSeek ? (
+          <button
+            type="button"
+            onClick={() => onSeek(a.eventTime)}
+            className="rounded-md border border-brand-200 px-2 py-0.5 text-xs font-semibold text-brand-700 hover:bg-brand-50"
+            title="Play the recording from this moment"
+          >
+            ▶ {clock(a.eventTime)}
+          </button>
+        ) : null}
+        <span className="font-semibold text-slate-900">{a.eventLabel ?? "Whole report"}</span>
+        <AppealBadge status={a.status} adjustment={a.scoreAdjustment} />
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        {REASON_LABEL[a.reason] ?? a.reason} · {fmt(a.createdAt)}
+      </p>
+      <blockquote className="mt-2 rounded-md border-l-4 border-slate-300 bg-slate-50 px-3 py-2 text-slate-800">
+        {a.message}
+      </blockquote>
+
+      {a.status === "open" ? (
+        <div className="mt-3 space-y-2">
+          <div className="flex flex-wrap items-center gap-3">
+            {["accept", "reject"].map((d) => (
+              <label key={d} className="flex items-center gap-1.5 text-sm">
+                <input type="radio" name={`decision-${a.id}`} checked={decision === d} onChange={() => setDecision(d)} />
+                {d === "accept" ? "Accept — overturn this finding" : "Reject — keep the finding"}
+              </label>
+            ))}
+          </div>
+          {decision === "accept" ? (
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              Score adjustment
+              <input
+                type="number"
+                min={-20}
+                max={20}
+                value={Number.isNaN(adjustment) ? "" : adjustment}
+                onChange={(e) => setAdjustment(e.target.value === "" ? NaN : Number(e.target.value))}
+                className="w-20 rounded-md border border-slate-300 px-2 py-1"
               />
-              <button type="button" disabled={busy || !response.trim()} onClick={send} className="btn-primary px-4 py-2">
-                Send response
-              </button>
-            </>
-          )}
+              <span className="text-xs text-slate-500">suggested {a.suggestedAdjustment >= 0 ? "+" : ""}{a.suggestedAdjustment}</span>
+            </label>
+          ) : null}
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Explain your decision to the student."
+            className="h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2"
+          />
+          <button
+            type="button"
+            disabled={busy || !note.trim() || (decision === "accept" && !Number.isInteger(adjustment))}
+            onClick={submit}
+            className="btn-primary px-4 py-1.5"
+          >
+            Send decision
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2 rounded-md bg-indigo-50 px-3 py-2">
+          <p className="text-xs text-indigo-700">
+            {a.decidedBy} · {fmt(a.decidedAt)}
+          </p>
+          <p className="mt-1 text-slate-800">{a.decisionNote}</p>
         </div>
       )}
       <ErrorLine error={error} />
-    </article>
+    </li>
   );
 }
 
@@ -301,104 +454,102 @@ export function ReviewResultCard({ review }) {
   );
 }
 
-/** Student: accept the report or ask for clarification on a clip. */
+/** Student: accept the report, track appeals, or appeal the report as a whole. */
 export function StudentResponseCard({ report, onUpdated }) {
   const fb = report.feedback;
-  const [mode, setMode] = useState(null); // null | "clarify"
-  const [message, setMessage] = useState("");
-  const [clip, setClip] = useState("");
+  const appeals = report.appeals ?? [];
+  const openCount = appeals.filter((a) => a.status === "open").length;
+  const canAppealMore = appeals.length < (report.meta.maxAppeals ?? 5);
+  const wholeAppealed = appeals.some((a) => a.eventId == null);
+  const [appealing, setAppealing] = useState(false);
   const { busy, error, run } = useAction();
-  const locked = Boolean(fb?.response);
 
-  async function submit(kind) {
+  async function accept() {
+    const updated = await run(() => api(`/reports/${report.meta.sessionId}/accept`, { method: "POST", body: {} }));
+    if (updated) onUpdated(updated);
+  }
+
+  async function withdraw(id) {
     const updated = await run(() =>
-      api(`/reports/${report.meta.sessionId}/feedback`, {
-        method: "POST",
-        body: { kind, message: kind === "clarify" ? message : "", referencedClip: kind === "clarify" ? clip || null : null },
-      }),
+      api(`/reports/${report.meta.sessionId}/appeals/${id}`, { method: "DELETE" }),
     );
-    if (updated) {
-      onUpdated(updated);
-      setMode(null);
-    }
+    if (updated) onUpdated(updated);
   }
 
   return (
     <article className="rounded-xl border border-slate-200 bg-slate-50/80 p-5">
       <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Your response</h3>
-      {fb && mode == null ? (
-        <div className="mt-3 space-y-2 text-sm text-slate-700">
-          {fb.kind === "accept" ? (
-            <p>
-              <span className="font-semibold text-emerald-700">✓ You accepted this feedback</span>{" "}
-              <span className="text-xs text-slate-500">{fmt(fb.createdAt)}</span>
-            </p>
-          ) : (
-            <>
-              <p className="font-semibold text-slate-800">
-                You asked for clarification{" "}
-                <span className="text-xs font-normal text-slate-500">{fmt(fb.createdAt)}</span>
-              </p>
-              <blockquote className="rounded-lg border-l-4 border-slate-300 bg-white px-3 py-2">{fb.message}</blockquote>
-              {fb.referencedClip ? <p className="text-xs text-slate-500">Clip: {fb.referencedClip}</p> : null}
-              {fb.response ? (
-                <div className="rounded-lg bg-indigo-50 px-3 py-2">
-                  <p className="text-xs text-indigo-700">{fb.respondedBy} replied {fmt(fb.respondedAt)}</p>
-                  <p className="mt-1 text-slate-800">{fb.response}</p>
-                </div>
+
+      {fb?.kind === "accept" ? (
+        <p className="mt-3 text-sm">
+          <span className="font-semibold text-emerald-700">✓ You accepted this report</span>{" "}
+          <span className="text-xs text-slate-500">{fmt(fb.createdAt)}</span>
+        </p>
+      ) : (
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Agree with the report? Accept it. Think a finding is wrong? Use <strong>Appeal</strong> on that
+          moment in the timeline — your instructor will review the clip and decide.
+        </p>
+      )}
+
+      {appeals.length ? (
+        <ul className="mt-3 space-y-2">
+          {appeals.map((a) => (
+            <li key={a.id} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                {a.eventTime != null ? (
+                  <span className="text-xs font-semibold text-brand-700">{clock(a.eventTime)}</span>
+                ) : null}
+                <span className="font-medium text-slate-900">{a.eventLabel ?? "Whole report"}</span>
+                <AppealBadge status={a.status} adjustment={a.scoreAdjustment} />
+              </div>
+              <p className="mt-1 text-slate-600">“{a.message}”</p>
+              {a.status === "open" ? (
+                <button type="button" disabled={busy} onClick={() => withdraw(a.id)} className="link-brand mt-1 text-xs">
+                  Withdraw
+                </button>
               ) : (
-                <p className="text-xs text-amber-800">Waiting for your instructor to respond.</p>
+                <div className="mt-2 rounded-md bg-indigo-50 px-3 py-2">
+                  <p className="text-xs text-indigo-700">
+                    {a.decidedBy} · {fmt(a.decidedAt)}
+                  </p>
+                  <p className="mt-1 text-slate-800">{a.decisionNote}</p>
+                </div>
               )}
-            </>
-          )}
-          {!locked ? (
-            <button type="button" onClick={() => setMode(fb.kind === "clarify" ? "clarify" : "choose")} className="link-brand text-xs">
-              Change response
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {appealing ? (
+        <AppealForm
+          report={report}
+          eventId={null}
+          onCancel={() => setAppealing(false)}
+          onUpdated={(r) => {
+            setAppealing(false);
+            onUpdated(r);
+          }}
+        />
+      ) : (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {fb?.kind !== "accept" ? (
+            <button
+              type="button"
+              disabled={busy || openCount > 0}
+              onClick={accept}
+              className="btn-primary px-4 py-2"
+              title={openCount ? "Wait for your open appeals to be decided first" : undefined}
+            >
+              Accept report
+            </button>
+          ) : null}
+          {canAppealMore && !wholeAppealed ? (
+            <button type="button" onClick={() => setAppealing(true)} className="btn-secondary px-4 py-2">
+              Appeal the whole report
             </button>
           ) : null}
         </div>
-      ) : mode === "clarify" ? (
-        <div className="mt-3 space-y-3 text-sm">
-          <label className="block">
-            <span className="text-slate-700">Which moment?</span>
-            <select value={clip} onChange={(e) => setClip(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
-              <option value="">Whole report</option>
-              {(report.clips ?? []).map((c) => (
-                <option key={c.id} value={`${c.time} - ${c.label}`}>
-                  {c.time} · {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="What do you think was misread, and why?"
-            className="h-24 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2"
-          />
-          <div className="flex gap-2">
-            <button type="button" disabled={busy || !message.trim()} onClick={() => submit("clarify")} className="btn-primary px-4 py-2">
-              Send to instructor
-            </button>
-            <button type="button" onClick={() => setMode(null)} className="btn-secondary px-4 py-2">
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            If you think a segment was misinterpreted, ask your instructor to take another look.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" disabled={busy} onClick={() => submit("accept")} className="btn-primary px-4 py-2">
-              Accept feedback
-            </button>
-            <button type="button" onClick={() => setMode("clarify")} className="btn-secondary px-4 py-2">
-              Request clarification
-            </button>
-          </div>
-        </>
       )}
       <ErrorLine error={error} />
     </article>

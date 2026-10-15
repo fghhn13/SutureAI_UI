@@ -1,0 +1,12 @@
+{
+  "_comment": "Demo recordings with hand-made annotations. Uploads are matched by SHA-256 first, then by filename. Add a file's hash with: python -m app.demo register <video> --id <id>",
+  "recordings": [
+    {
+      "id": "suture-demo-1",
+      "title": "Needle threading & knot tying, two segments (second interrupted)",
+      "annotation": "suture-demo-1.json",
+      "sha256": [],
+      "filenames": ["suture_1.mp4"]
+    }
+  ]
+}
