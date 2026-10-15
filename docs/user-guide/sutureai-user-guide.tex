@@ -1,0 +1,512 @@
+﻿% SutureAI platform user guide.
+% Build:  latexmk -xelatex -outdir=build sutureai-user-guide.tex
+% Screenshots: node tools/capture-screenshots.mjs <baseUrl>  (see that file's header)
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.2cm,top=2.4cm,bottom=2.4cm]{geometry}
+\usepackage{fontspec}
+\usepackage[default]{sourcesanspro}
+\usepackage{sourcecodepro}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage[most]{tcolorbox}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{fontawesome5}
+\usepackage[hidelinks]{hyperref}
+\usepackage{float}
+
+% ---- palette (matches the app) -------------------------------------------------
+\definecolor{brand}{HTML}{1E66DC}
+\definecolor{brandlight}{HTML}{EEF5FF}
+\definecolor{ink}{HTML}{0F172A}
+\definecolor{muted}{HTML}{64748B}
+\definecolor{line}{HTML}{CBD5E1}
+\definecolor{okgreen}{HTML}{047857}
+\definecolor{okbg}{HTML}{ECFDF5}
+\definecolor{warn}{HTML}{B45309}
+\definecolor{warnbg}{HTML}{FFFBEB}
+\definecolor{bad}{HTML}{BE123C}
+\definecolor{badbg}{HTML}{FFF1F2}
+\definecolor{lanestudent}{HTML}{F1F7FF}
+\definecolor{lanesystem}{HTML}{F8FAFC}
+\definecolor{laneinstructor}{HTML}{F5F3FF}
+\definecolor{violet}{HTML}{4F46E5}
+
+\color{ink}
+\hypersetup{colorlinks=true,linkcolor=brand,urlcolor=brand}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlist{itemsep=0.15em,topsep=0.3em}
+
+\titleformat{\section}{\Large\bfseries\color{ink}}{\color{brand}\thesection}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{ink}}{\color{brand}\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.6em}{0.6em}
+\titlespacing*{\subsection}{0pt}{1.2em}{0.4em}
+
+\captionsetup{font={small,color=muted},labelfont={bf,color=muted},skip=6pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[L]{\small\color{muted}SutureAI · User Guide}
+\fancyhead[R]{\small\color{muted}\leftmark}
+\fancyfoot[C]{\small\color{muted}\thepage}
+\renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+
+% ---- helpers -------------------------------------------------------------------
+\newcommand{\ui}[1]{\textbf{\color{brand}#1}}            % a button / control
+\newcommand{\page}[1]{\texttt{\small #1}}                % a route
+\newcommand{\shot}[3][\linewidth]{%                      % screenshot with frame
+  \begin{figure}[H]\centering
+  \fcolorbox{line}{white}{\includegraphics[width=\dimexpr#1-2\fboxsep-2\fboxrule\relax,
+    height=0.4\textheight,keepaspectratio]{figures/#2}}
+  \caption{#3}\end{figure}}
+
+\newtcolorbox{tip}{enhanced,colback=brandlight,colframe=brand!35,boxrule=0.6pt,arc=3pt,
+  left=8pt,right=8pt,top=5pt,bottom=5pt,fontupper=\small,
+  before upper={\textcolor{brand}{\faLightbulb[regular]}\enspace}}
+\newtcolorbox{note}{enhanced,colback=warnbg,colframe=warn!40,boxrule=0.6pt,arc=3pt,
+  left=8pt,right=8pt,top=5pt,bottom=5pt,fontupper=\small,
+  before upper={\textcolor{warn}{\faInfoCircle}\enspace}}
+
+\tikzset{
+  box/.style={draw=#1!55,fill=white,rounded corners=4pt,thick,align=center,
+              minimum height=1.05cm,text width=2.2cm,font=\small},
+  box/.default=brand,
+  arr/.style={-{Stealth[length=2.4mm]},thick,color=muted},
+  lane/.style={rounded corners=6pt,inner sep=7pt},
+  lanelabel/.style={font=\scriptsize\bfseries,color=muted,anchor=south west,inner sep=2pt},
+  state/.style={draw=#1,fill=#1!8,rounded corners=10pt,thick,font=\small\ttfamily,
+                minimum height=0.8cm,inner xsep=7pt},
+  state/.default=brand,
+}
+
+\begin{document}
+
+% ---- title ---------------------------------------------------------------------
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[brand] (current page.north west) rectangle ([yshift=-0.55cm]current page.north east);
+\end{tikzpicture}
+\vspace*{1.2cm}
+{\color{brand}\large\bfseries SutureAI}\par
+\vspace{0.2em}
+{\fontsize{30}{36}\selectfont\bfseries Platform User Guide}\par
+\vspace{0.6em}
+{\large\color{muted} Recording, scoring and reviewing simulated suturing practice}\par
+\vspace{0.4em}
+{\small\color{muted} For students and instructors · Prototype edition · October 2026}\par
+\vspace{1.4em}
+
+\begin{tcolorbox}[colback=lanesystem,colframe=line,boxrule=0.5pt,arc=4pt,left=10pt,right=10pt]
+\small
+\textbf{What SutureAI does.} Students record a practice task (simple suturing, knot tying or
+needle handling) and upload the video. The platform scores it on five dimensions and writes a
+report that links each finding to a moment in the video. Instructors follow their whole class,
+confirm or adjust scores, and decide students' appeals against individual findings.
+
+\medskip
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\faUserGraduate\enspace\textbf{Students} & Section~\ref{sec:student}: dashboard, uploading a recording, reading a report, appealing a finding, exporting a PDF. \\
+\faChalkboardTeacher\enspace\textbf{Instructors} & Section~\ref{sec:instructor}: class overview, student detail, review queue, deciding appeals, reviewing a report. \\
+\faCogs\enspace\textbf{Everyone} & Sections~\ref{sec:start} and~\ref{sec:reference}: signing in, statuses, troubleshooting. \\
+\end{tabularx}
+\end{tcolorbox}
+
+% ---- 1 overview ----------------------------------------------------------------
+\section{How it works}
+
+Every recording goes through the same loop. The student only does two things (upload, then
+respond); scoring and the first draft of the report are automatic; the instructor has the final
+word on the score and decides any appeal against a finding.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.55cm and 0.36cm]
+  % student lane
+  \node[box] (rec) {\faVideo\\Record the practice task};
+  \node[box,right=of rec] (up) {\faUpload\\Upload the video};
+  % system lane
+  \node[box=muted,below right=1.15cm and 0.5cm of up] (score) {\faCog\\Score the video};
+  \node[box=muted,right=of score] (gen) {\faIcon{file-alt}\\Write the report};
+  % instructor lane
+  \node[box=violet,above right=1.15cm and 0.5cm of gen] (rev) {\faCheckCircle\\Review \& confirm score};
+  % student again
+  \node[box,below=2.95cm of rev] (read) {\faBookOpen\\Read report, accept or appeal};
+
+  \draw[arr] (rec) -- (up);
+  \draw[arr] (up) |- (score);
+  \draw[arr] (score) -- (gen);
+  \draw[arr] (gen) |- (rev);
+  \draw[arr] (gen) |- (read);
+  \draw[arr,dashed,color=violet] (read.east) -- ++(0.55,0) |- node[pos=0.25,right,font=\footnotesize,color=violet,align=left]{appeal\\[-2pt]\& decision} (rev.east);
+
+  \begin{scope}[on background layer]
+    \node[lane,fill=lanestudent,fit=(rec)(up),label={[lanelabel]north west:STUDENT}] {};
+    \node[lane,fill=lanesystem,fit=(score)(gen),label={[lanelabel]north west:PLATFORM (automatic)}] {};
+    \node[lane,fill=laneinstructor,fit=(rev),label={[lanelabel]north west:INSTRUCTOR}] {};
+    \node[lane,fill=lanestudent,fit=(read),label={[lanelabel,anchor=north west]south west:STUDENT}] {};
+  \end{scope}
+\end{tikzpicture}
+\caption{The training loop. Scoring and report writing run in the background; the student can
+close the page and come back.}
+\end{figure}
+
+The report scores five \textbf{dimensions}, each from 0 to 100:
+
+\begin{center}
+\small
+\begin{tabularx}{0.92\linewidth}{@{}>{\bfseries}l X@{}}
+\toprule
+Efficiency & Duration, path length of the instruments, idle time between steps. \\
+Accuracy & Needle entry and exit points, repeated insertion attempts, stitch spacing. \\
+Procedural Flow & Whether every step was done, in the right order, without rework. \\
+Safety & Dropped needle, wrong instrument, instruments leaving the working area. \\
+Product Quality & Consistency of the finished stitches and security of the knots. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{note}
+\textbf{Prototype notice.} In this version the video scoring step is a placeholder: scores and
+detected events come from a simulation (or, for the demonstration recording, from a manual
+annotation) rather than from analysing the video. Everything else (upload, reports, appeals,
+reviews, PDF export) works as described.
+\end{note}
+
+% ---- 2 getting started ---------------------------------------------------------
+\section{Getting started}\label{sec:start}
+
+\subsection{Signing in}
+\begin{minipage}[t]{0.40\linewidth}
+\vspace{0pt}
+\centering
+\fcolorbox{line}{white}{\includegraphics[width=\dimexpr0.95\linewidth-2\fboxsep-2\fboxrule\relax]{figures/01-login.png}}
+\captionof{figure}{Sign-in page.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.56\linewidth}
+\vspace{0pt}
+Enter your email and password and press \ui{Sign in}. You land on the page for your role:
+students on their \emph{dashboard}, instructors on the \emph{class overview}.
+
+The demo installation comes with these accounts (password \texttt{suture-local-demo}):
+
+\smallskip
+\small
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Email} & \textbf{Who} \\
+\midrule
+\texttt{chen@demo.local} & Instructor, Groups A and B \\
+\texttt{patel@demo.local} & Instructor, Group B only \\
+\texttt{alex@demo.local} & Student, Group A \\
+\texttt{priya@demo.local} & Student, scores declining \\
+\texttt{sam@demo.local} & Student, improving \\
+\texttt{jordan@demo.local} & Student, Group B \\
+\bottomrule
+\end{tabularx}
+
+\normalsize
+\medskip
+Instructors only ever see students in the groups they teach.
+\end{minipage}
+
+% ---- 3 students ----------------------------------------------------------------
+\section{For students}\label{sec:student}
+
+\subsection{Your dashboard}
+The dashboard (\page{/}) is your home page. From top to bottom it shows your course and current
+task, any recording that is still being processed, a snapshot of your latest report, your recent
+trend, the practice priorities taken from your last report, notifications (for example when your
+instructor has reviewed a report or decided one of your appeals), a calendar of training days and your
+full history.
+
+\shot{02-student-dashboard.png}{Student dashboard. \ui{Start training} records a new session;
+\ui{Open latest report} jumps to your most recent report.}
+
+\subsection{Recording and uploading a session}
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item On the dashboard press \ui{Start training} (or \ui{Start this task} on the current-task card).
+  \item \textbf{Pick the task} you practised.
+  \item \textbf{Add your video}: drag it onto the dashed area or click it to browse. MP4, WebM, MOV and
+        MKV are accepted. A preview appears with the file size and duration so you can check it is
+        the right recording.
+  \item Press \ui{Upload \& analyse}. A progress bar shows the upload; you can cancel it.
+\end{enumerate}
+
+\shot[0.86\linewidth]{03-train-upload.png}{Choosing the task and the video before uploading.}
+
+After the upload the page shows the analysis as it happens: the overall percentage with an
+estimate of the time left, a checklist of the seven analysis stages (verify the recording, detect
+instruments, track hands, segment the procedure steps, score the dimensions, write the report,
+link evidence clips) and an \emph{Activity} panel describing what is being done right now. It
+usually takes under a minute. When it finishes, the report opens automatically.
+
+You can leave the page at any time: unfinished sessions are listed under \emph{Recordings in
+progress} on your dashboard, and the page address (\page{/train/<session>}) can be reopened later.
+
+\shot{04-train-processing.png}{Analysis in progress: stage checklist on the left, live activity on the right.}
+
+\begin{tip}
+For the most reliable scores, film from above with the whole practice pad in frame, keep your
+hands from covering the needle, use even lighting, and record the task from start to finish
+without stopping.
+\end{tip}
+
+\subsection{Reading your report}
+The top of the report gives the overall score, how confident the system is, the change since your
+previous session and the five dimension scores with a radar chart. The badge in the top-right
+corner shows whether your instructor has reviewed it yet. If your instructor confirmed a different
+score, or accepted one of your appeals, a \emph{Current score} line shows the score that counts.
+Use the \ui{Session} menu to switch between your reports.
+
+\shot{05-report-overview.png}{Report header, overall performance and dimension scores.}
+
+The \textbf{timeline} lists what was detected and when: normal steps (blue), warnings (amber) and
+issues (red). \ui{Expand} shows the detail; \ui{Replay} (or \ui{Jump}) plays the recording from
+that moment. Warnings and issues also have an \ui{Appeal} button (Section~\ref{sec:appeal}).
+\emph{Assessment highlights} summarise the strongest dimension, the main issue and what to focus on.
+
+\shot{06-report-timeline.png}{Timeline. The struck-through issue at 01:05 was overturned after the
+student's appeal; the warning at 00:47 can still be appealed.}
+
+\shot[0.9\linewidth]{13-report-evidence.png}{Evidence replay. Each key clip's \ui{Replay} button plays
+your recording from that moment.}
+
+\subsection{Accepting or appealing your report}\label{sec:appeal}
+If you agree with the report, press \ui{Accept report} in the \emph{Your response} box at the bottom.
+
+If you think a finding is wrong, \textbf{appeal it}:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item Find the warning or issue in the timeline and press \ui{Replay} to check the moment yourself.
+  \item Press \ui{Appeal} on that event and choose a reason: \emph{This didn't happen},
+        \emph{The view was blocked}, \emph{Intentional / wrong moment} or \emph{Other}.
+  \item Explain what really happened and press \ui{Send appeal}.
+\end{enumerate}
+
+\shot[0.8\linewidth]{14-appeal-form.png}{Appealing a finding directly from the timeline.}
+
+The event then shows \emph{Appeal pending} and your instructor is notified. They watch the clip
+and decide:
+\begin{itemize}
+  \item \textbf{Accepted}: the finding is struck through as \emph{Overturned after appeal} and your score
+        is raised (the badge shows by how much, e.g.\ \emph{+4}).
+  \item \textbf{Rejected}: the finding stays; your instructor explains why.
+\end{itemize}
+Either way the decision and the instructor's reasoning appear under \emph{Your response}. You can
+withdraw an appeal while it is still pending, and you can also appeal the report as a whole with
+\ui{Appeal the whole report}. A report can carry up to five appeals.
+
+Next to it, \textbf{Instructor evaluation} shows your instructor's final score, comment and teaching
+focus once the review is complete, and \textbf{Personal note} is a private reflection saved with the
+report; instructors cannot see it.
+
+\shot{07-report-student-feedback.png}{A reviewed report: the appeal on 01:05 was accepted (+2) with the
+instructor's reasoning, and the student kept a private note.}
+
+\subsection{Exporting a report as PDF}
+Press \ui{Export PDF} at the top of a report. A print layout opens in a new tab and the browser's
+print dialog appears; choose \textbf{Save as PDF} as the destination. The PDF contains the scores,
+the timeline with a still from the recording at every event, strengths and next steps, all appeals
+with their decisions and the instructor's review, so it can be filed as a record of the session.
+
+\shot[0.72\linewidth]{15-export-pdf.png}{First page of an exported report. Each timeline event shows the
+video frame at that moment.}
+
+% ---- 4 instructors -------------------------------------------------------------
+\section{For instructors}\label{sec:instructor}
+
+The instructor area has two pages in the top bar, \ui{Overview} and \ui{Review queue}. Both lead
+to student pages and reports:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.55cm and 1.9cm]
+  \node[box=violet] (ov) {\faThLarge\\Class overview\\{\scriptsize\ttfamily /instructor}};
+  \node[box=violet,right=of ov] (st) {\faUser\\Student detail\\{\scriptsize\ttfamily /students/:id}};
+  \node[box,right=of st] (rep) {\faIcon{file-alt}\\Report\\(review form)};
+  \node[box=violet,below=0.75cm of st] (q) {\faInbox\\Review queue\\{\scriptsize\ttfamily /reviews}};
+  \draw[arr] (ov) -- node[above,font=\scriptsize,color=muted]{click a name} (st);
+  \draw[arr] (st) -- node[above,font=\scriptsize,color=muted]{Review / Open} (rep);
+  \draw[arr] (q) -| node[pos=0.25,below,font=\scriptsize,color=muted]{Review / Decide} (rep);
+  \draw[arr] (ov) |- node[pos=0.75,below,font=\scriptsize,color=muted]{KPI tiles} (q);
+  \draw[arr] (ov.north) to[bend left=18] node[above,font=\scriptsize,color=muted]{Open report (needs attention)} (rep.north);
+\end{tikzpicture}
+\caption{Navigating the instructor area.}
+\end{figure}
+
+\subsection{Class overview}
+Choose a group with the \ui{Cohort} menu; everything on the page refers to that group.
+
+\begin{itemize}
+  \item \textbf{Key numbers}: students (and how many trained this week), sessions this week, the
+        30-day average score, reports waiting for your review and open appeals. The last two are
+        links into the review queue.
+  \item \textbf{Needs attention} lists the students to look at now, most urgent first, each with a
+        link to the student or the report.
+  \item \textbf{Skill map} shows every student's recent average in each dimension. Paler cells are
+        lower scores, so weak spots (for one student, or for the whole group in a column) stand out.
+\end{itemize}
+
+\shot{08-instructor-overview.png}{Class overview for Group A.}
+
+\begin{center}
+\small
+\begin{tabularx}{0.95\linewidth}{@{}l l X@{}}
+\toprule
+\textbf{Flag} & \textbf{Level} & \textbf{When it appears} \\
+\midrule
+Open appeal & {\color{bad}\faCaretUp\ High} & The student appealed a finding and is waiting for your decision. \\
+Declining scores & {\color{bad}\faCaretUp\ High} & The average of the last 3 reports is at least 8 points below the 3 before them. \\
+Low score & {\color{warn}\faCircle\ Medium} & The latest score is below 60. \\
+Inactive & {\color{warn}\faCircle\ Medium} & No training for 14 days or more, or never. \\
+Failed upload & {\color{muted}\faCircle[regular]\ Low} & A recording could not be processed. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Below the skill map, the \textbf{Students} table lists everyone in the group. Click a column
+heading to sort (by default the students with the most waiting work come first) or type in the
+search box. \emph{Trend} is a small line of the last eight scores; \emph{Change} compares the
+average of the last three reports with the three before them.
+
+\shot{09-instructor-roster.png}{Student roster.}
+
+\subsection{Student detail}
+Click a student's name anywhere to open their page: who they are and their current flags, key
+numbers, the overall score for every report (hover for details, click a point to open that
+report), one small chart per dimension to see \emph{where} a change comes from, every session with
+its review and response status, and the training calendar.
+
+\shot{10-instructor-student.png}{A student whose scores are declining. The dimension charts show the
+drop is broad rather than in one skill.}
+
+\subsection{Review queue}
+The queue collects reports from all your groups (or one, with the \ui{Cohort} filter) in three tabs:
+\begin{itemize}
+  \item \textbf{To review}: reports without a completed review, oldest first. Drafts stay here until completed.
+  \item \textbf{Appeals}: reports with at least one appeal waiting for your decision.
+  \item \textbf{Reviewed}: completed reviews, most recent first.
+\end{itemize}
+
+\shot{11-review-queue.png}{The \emph{Appeals} tab of the review queue. Arrows such as \emph{74 → 72}
+show a score you changed in a draft.}
+
+\subsection{Reviewing a report}
+Opening a report as an instructor shows the \emph{Report Feedback \& Review} panel at the bottom.
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Decide any appeals} under \emph{Student appeals}. Each one shows the disputed finding,
+        the student's reason and message; \ui{\faPlay\ 0:03} replays that moment in the recording.
+        Choose \textbf{Accept} (the finding is overturned and the score adjusted by the amount you
+        set; a value is suggested: +4 for an issue, +2 for a warning) or \textbf{Reject}, explain
+        your decision, and press \ui{Send decision}.
+  \item Set the \textbf{final score}. It starts at the AI score plus any accepted appeals; the
+        \emph{Alignment} box updates as you type.
+  \item Write a \textbf{comment to the student} and add one or more \textbf{teaching focus} tags
+        (suggestions are offered from the weakest dimensions).
+  \item Press \ui{Save draft} to come back later (the student cannot see drafts), or
+        \ui{Complete review} to send it. A completed review can still be edited with \ui{Update review}.
+\end{enumerate}
+
+\shot{12-review-form.png}{An appeal waiting for a decision, above the review form.}
+
+\begin{center}
+\small
+\begin{tabularx}{0.8\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Alignment} & \textbf{Meaning} \\
+\midrule
+Agrees with AI & Final score equals the AI score. \\
+Adjusted & Changed by 10 points or less. \\
+Override & Changed by more than 10 points. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+If you accept an appeal after completing the review, the final score is adjusted automatically.
+
+\begin{tip}
+The \ui{As student sees it} button at the top of a report previews exactly what the student will
+see, which is handy before completing a review.
+\end{tip}
+
+% ---- 5 reference ---------------------------------------------------------------
+\section{Reference}\label{sec:reference}
+
+\subsection{Session status}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.4cm]
+  \node[state=muted] (c) {created};
+  \node[state,right=of c] (u) {uploaded};
+  \node[state,right=of u] (s) {scoring};
+  \node[state,right=of s] (sd) {scored};
+  \node[state,right=of sd] (g) {generating};
+  \node[state=okgreen,right=of g] (r) {ready};
+  \node[state=bad,below=0.9cm of sd] (f) {failed};
+  \foreach \a/\b in {c/u,u/s,s/sd,sd/g,g/r} \draw[arr] (\a) -- (\b);
+  \draw[arr,color=bad] (s) -- (f);
+  \draw[arr,color=bad] (g) -- (f);
+  \draw[arr,dashed] (f.west) -| node[pos=0.25,below,font=\scriptsize,color=muted]{Retry} (u.south);
+\end{tikzpicture}
+\caption{Lifecycle of a training session. \emph{Retry} resumes from the last step that succeeded.}
+\end{figure}
+
+\begin{center}
+\small
+\begin{tabularx}{0.95\linewidth}{@{}l l X@{}}
+\toprule
+\textbf{Status} & \textbf{Shown as} & \textbf{Meaning} \\
+\midrule
+\texttt{created} & Waiting for video & Session started, no video uploaded yet. \\
+\texttt{uploaded} & Queued for analysis & Video received, waiting its turn. \\
+\texttt{scoring} & Analysing video & The video is being analysed. \\
+\texttt{scored}, \texttt{generating} & Writing report & Scores are ready; the report is being written. \\
+\texttt{ready} & Report ready & The report can be opened. \\
+\texttt{failed} & Failed & Something went wrong; the page shows the reason and a \ui{Retry} button. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Appeal status}
+\begin{center}
+\small
+\begin{tabularx}{0.95\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Status} & \textbf{Meaning} \\
+\midrule
+Appeal pending & Sent; waiting for the instructor. The student can still withdraw it. \\
+Appeal accepted (+\emph{n}) & The finding is overturned and the score raised by \emph{n} points. \\
+Appeal rejected & The finding stands; the instructor's reasoning is shown. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Troubleshooting}
+\begin{description}[style=nextline,leftmargin=0pt,font=\bfseries]
+  \item[I cannot sign in.]
+    Check the email address and password (the password is case-sensitive). If it still fails,
+    ask your course administrator to check that your account exists.
+  \item[My video is rejected.]
+    Only MP4, WebM, MOV and MKV files are accepted, up to 1~GB by default. Empty files are refused.
+  \item[Processing failed.]
+    Open the session (from \emph{Recordings in progress} on the dashboard) and press \ui{Retry}.
+    If it fails again, record a new session with better lighting and framing.
+  \item[\ui{Accept report} is greyed out.]
+    You have an appeal pending on that report. Wait for the decision or withdraw the appeal first.
+  \item[There is no \ui{Appeal} button on an event.]
+    Only warnings and issues can be appealed, each once, up to five appeals per report.
+  \item[The print dialog did not open after \ui{Export PDF}.]
+    Allow pop-ups for the site, or press \ui{Save as PDF} at the top of the print page once the
+    video stills have loaded.
+  \item[An instructor cannot see a student.]
+    Instructors only see students in the groups they teach.
+\end{description}
+
+\end{document}

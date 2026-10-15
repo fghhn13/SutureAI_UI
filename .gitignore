@@ -58,3 +58,6 @@ server/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# LaTeX build output (user guide)
+docs/user-guide/build/
