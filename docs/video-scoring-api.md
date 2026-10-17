@@ -128,9 +128,9 @@ GET  /v1/health            健康检查
   "events": [
     { "t": 3.0,  "severity": "error",   "code": "wrong_tool",       "label": "Wrong tool in left hand",
       "detail": "Observed tool: scissors. Expected tool: forceps.", "clip": true,
-      "endT": 5.0, "confidence": 0.91 },
+      "endT": 5.0, "confidence": 0.91, "impact": 5 },
     { "t": 26.0, "severity": "warning", "code": "threading_failed", "label": "Threading failed",
-      "detail": "First pass did not go through.", "clip": true }
+      "detail": "First pass did not go through.", "clip": true, "impact": 9 }
   ],
   "notes": [
     "The recording ends before the task was completed; later steps could not be scored."
@@ -183,6 +183,7 @@ GET  /v1/health            健康检查
 | `detail` | string | ✔ | 一句英文说明，展开时显示，可以为空字符串 |
 | `clip` | bool | ✔ | 是否值得作为「重点片段」单独列出。建议所有 `error`、`warning` 和关键步骤设为 true，每个视频 3～8 个 |
 | `confidence` | float |  | 0～1，这个事件判断的置信度 |
+| `impact` | number | 建议提供 | 这个事件让总分少了多少分（正数）。只对 `warning`/`error` 有意义。平台据此生成报告最上面的「优先改进」和「扣掉的分数去哪了」：取扣分最多的问题作为重点，各事件的 `impact` 之和不超过 `100 − overallScore` 时，差额显示为「其他技术细节」；超过时按比例缩放。不提供时，平台按事件类型用默认值估算，效果会差一些 |
 
 **事件类型 `code`（v1）**，平台现有的模拟评分和演示标注都使用这些类型：
 
@@ -200,6 +201,8 @@ GET  /v1/health            健康检查
 | `knot_start`、`knot_throw_1..n` | normal | 开始打结、第 n 个结完成 |
 | `knot_loose` | warning | 结不够紧或不是方结 |
 | `recording_interrupted` | error | 视频在任务完成前中断 |
+
+> `label` / `detail` 用英文即可：平台的中文报告会按 `code` 自动换成中文标题，`detail` 暂时保留英文。如果服务能直接输出中文，可以额外提供 `labelZh` / `detailZh`，平台会优先使用。
 
 > **注意**：学生可以对 `warning` 和 `error` 事件提出申诉，老师采纳后系统会自动加分（问题 +4、警告 +2）。所以 **`severity` 要判得保守**：拿不准的事件宁可标 `warning`，或者给出较低的 `confidence`。
 
