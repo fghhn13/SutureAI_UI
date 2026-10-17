@@ -2,11 +2,15 @@ import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, homePathFor } from "../auth/demoAccounts.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { ApiError } from "../api/client.js";
+import LanguageSwitch from "../components/LanguageSwitch.jsx";
+import { useI18n } from "../i18n/index.js";
 
 export default function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useI18n();
   const fromLoc = location.state?.from;
   const from = fromLoc ? `${fromLoc.pathname}${fromLoc.search ?? ""}` : null;
 
@@ -27,7 +31,9 @@ export default function LoginPage() {
       const u = await login(email, password);
       navigate(from ?? homePathFor(u), { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed.");
+      // The API's 401 message is English; show our own wording for the common case.
+      if (err instanceof ApiError && err.status === 401) setError(t("login.invalid"));
+      else setError(err instanceof Error ? err.message : t("login.failed"));
     } finally {
       setSubmitting(false);
     }
@@ -52,11 +58,12 @@ export default function LoginPage() {
         <div className="motion-safe:animate-scale-in">
           <div className="surface-card relative overflow-hidden p-8 ring-1 ring-slate-200/60">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-400 via-brand-500 to-brand-600" />
-            <p className="text-sm font-semibold tracking-wide text-brand-700">SutureAI</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">Sign in</h1>
-            <p className="mt-1 text-sm text-slate-600">
-              Local prototype only — do not save these credentials in your browser.
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold tracking-wide text-brand-700">{t("common.appName")}</p>
+              <LanguageSwitch />
+            </div>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{t("login.title")}</h1>
+            <p className="mt-1 text-sm text-slate-600">{t("login.subtitle")}</p>
 
             <form
               onSubmit={handleSubmit}
@@ -91,7 +98,7 @@ export default function LoginPage() {
                   htmlFor="login-email"
                   className="block text-xs font-semibold uppercase tracking-wide text-slate-500"
                 >
-                  Email
+                  {t("login.email")}
                 </label>
                 <input
                   id="login-email"
@@ -112,7 +119,7 @@ export default function LoginPage() {
                   htmlFor="login-password"
                   className="block text-xs font-semibold uppercase tracking-wide text-slate-500"
                 >
-                  Password
+                  {t("login.password")}
                 </label>
                 <input
                   id="login-password"
@@ -139,24 +146,29 @@ export default function LoginPage() {
               ) : null}
 
               <button type="submit" disabled={submitting} className="btn-primary w-full rounded-xl py-3">
-                {submitting ? "Signing in…" : "Sign in"}
+                {submitting ? t("login.submitting") : t("login.submit")}
               </button>
             </form>
 
             <p className="mt-4 rounded-lg border border-amber-100 bg-amber-50/80 px-3 py-2 text-xs text-amber-950">
-              If Chrome still warns about a saved password, remove the old entry for this site under{" "}
-              <strong>Settings → Password Manager</strong> (the previous demo password was{" "}
-              <code className="font-mono">demo</code>).
+              {t("login.chromeHint.before")} <strong>{t("login.chromeHint.path")}</strong>{" "}
+              {t("login.chromeHint.middle")} <code className="font-mono">demo</code>
+              {t("login.chromeHint.after")}
             </p>
 
             <div className="mt-4 rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50/90 to-slate-50 p-4 text-xs text-slate-600 transition-colors duration-200 hover:border-brand-100">
               <p className="font-semibold text-slate-800">
-                Demo accounts <span className="font-normal text-slate-500">(password {DEMO_PASSWORD})</span>
+                {t("login.demoAccounts")}{" "}
+                <span className="font-normal text-slate-500">
+                  {t("login.demoPassword", { password: DEMO_PASSWORD })}
+                </span>
               </p>
               <ul className="mt-2 space-y-1.5 font-mono text-[11px] leading-relaxed">
                 {DEMO_ACCOUNTS.map((acc) => (
                   <li key={acc.login} className="transition-colors hover:text-slate-900">
-                    {acc.login} <span className="font-sans text-slate-400">· {acc.note}</span>
+                    {acc.login} <span className="font-sans text-slate-400">
+                      · {t(`login.demoNotes.${acc.login.split("@")[0]}`, { defaultValue: acc.note })}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -165,7 +177,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-8 text-center text-xs text-slate-500 motion-safe:animate-fade-in-up motion-safe:[animation-delay:200ms]">
-          Students and instructors sign in here.
+          {t("login.footer")}
         </p>
       </main>
     </div>

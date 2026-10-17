@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { intlLocale, reliabilityLabel, reviewStatusLabel, taskName, useI18n } from "../i18n/index.js";
 
 function dateKey(d) {
   if (!d || Number.isNaN(d.getTime())) return "";
@@ -9,12 +10,12 @@ function dateKey(d) {
   return `${y}-${m}-${day}`;
 }
 
-function formatDisplayDate(d) {
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+const DISPLAY_DATE = { month: "short", day: "numeric", year: "numeric" };
+
+/** Short weekday name for a Monday-based row index (0 = Monday). */
+function weekdayLabel(locale, row) {
+  // 1 Jan 2024 was a Monday.
+  return new Date(2024, 0, 1 + row).toLocaleDateString(intlLocale(locale), { weekday: "short" });
 }
 
 /** Activity intensity from session count only (not score). */
@@ -65,6 +66,8 @@ export default function TrainingActivityCalendar({
   years,
   defaultYear,
 }) {
+  const { t, locale, formatDate } = useI18n();
+  const formatDisplayDate = (d) => formatDate(d, DISPLAY_DATE);
   const [selectedYear, setSelectedYear] = useState(defaultYear ?? years[0]);
   const [hover, setHover] = useState(null);
   const [selectedKey, setSelectedKey] = useState(null);
@@ -91,11 +94,11 @@ export default function TrainingActivityCalendar({
         prevMonday.getMonth() !== monday.getMonth() ||
         prevMonday.getFullYear() !== monday.getFullYear();
       const label = monthBoundary
-        ? monday.toLocaleDateString("en-US", { month: "short" })
+        ? monday.toLocaleDateString(intlLocale(locale), { month: "short" })
         : "";
       return { wi, label };
     });
-  }, [columns]);
+  }, [columns, locale]);
 
   const reportSearch = (sessionId) =>
     `?session=${encodeURIComponent(sessionId)}`;
@@ -109,20 +112,19 @@ export default function TrainingActivityCalendar({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">
-            Training Activity Calendar
+            {t("calendar.title")}
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            How often you practiced—darker squares mean more sessions that day (not a score
-            judgement). Use it to spot streaks and gaps.
+            {t("calendar.subtitle")}
           </p>
           <p className="mt-3 text-sm text-slate-700">
             <span className="font-semibold text-slate-900">{totalSessionsInYear}</span>{" "}
-            training sessions in {selectedYear}
+            {t("calendar.sessionsInYear", { count: totalSessionsInYear, year: selectedYear })}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Year
+            {t("calendar.year")}
           </span>
           <div className="flex flex-col gap-1">
             {years.map((y) => (
@@ -150,11 +152,11 @@ export default function TrainingActivityCalendar({
       <div className="relative mt-6 flex gap-2 overflow-x-auto pb-2" onMouseLeave={onLeaveGrid}>
         {/* Weekday labels */}
         <div className="flex shrink-0 flex-col justify-between pt-6 text-[10px] font-medium text-slate-400">
-          <span className="h-3 leading-3">Mon</span>
+          <span className="h-3 leading-3">{weekdayLabel(locale, 0)}</span>
           <span className="h-3 leading-3" aria-hidden />
-          <span className="h-3 leading-3">Wed</span>
+          <span className="h-3 leading-3">{weekdayLabel(locale, 2)}</span>
           <span className="h-3 leading-3" aria-hidden />
-          <span className="h-3 leading-3">Fri</span>
+          <span className="h-3 leading-3">{weekdayLabel(locale, 4)}</span>
           <span className="h-3 leading-3" aria-hidden />
           <span className="h-3 leading-3" aria-hidden />
         </div>
@@ -218,7 +220,7 @@ export default function TrainingActivityCalendar({
                       )} ${inY ? "cursor-pointer hover:ring-2 hover:ring-brand-400/60 focus:outline-none focus:ring-2 focus:ring-brand-500" : "cursor-default"}`}
                       aria-label={
                         inY
-                          ? `${formatDisplayDate(date)}, ${sessions} session(s)`
+                          ? t("calendar.cellLabel", { date: formatDisplayDate(date), count: sessions })
                           : undefined
                       }
                     />
@@ -248,33 +250,34 @@ export default function TrainingActivityCalendar({
         >
           <p className="font-semibold text-slate-900">{formatDisplayDate(hover.date)}</p>
           <p className="mt-1 text-slate-700">
-            {hover.data.sessions} training session
-            {hover.data.sessions === 1 ? "" : "s"}
+            {t("calendar.tooltipSessions", { count: hover.data.sessions })}
           </p>
           <p className="mt-1 text-slate-600">
-            Tasks: {hover.data.tasks?.join(", ") || "—"}
+            {t("calendar.tooltipTasks", {
+              tasks: hover.data.tasks?.map((name) => taskName(t, name)).join(locale === "zh" ? "、" : ", ") || "—",
+            })}
           </p>
           <p className="mt-1 text-slate-600">
-            Total practice time: {hover.data.totalMinutes ?? "—"} min
+            {t("calendar.tooltipTime", { minutes: hover.data.totalMinutes ?? "—" })}
           </p>
           <p className="mt-1 text-slate-600">
-            Reports ready: {hover.data.reportsReady ?? 0}
+            {t("calendar.tooltipReports", { count: hover.data.reportsReady ?? 0 })}
           </p>
         </div>
       )}
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500">
-        <span>How often you trained (session count)</span>
+        <span>{t("calendar.legend")}</span>
         <div className="flex items-center gap-2">
-          <span>Less</span>
+          <span>{t("calendar.less")}</span>
           <div className="flex gap-1">
             <span className="h-3 w-3 rounded-sm bg-slate-100 ring-1 ring-slate-200/80" />
             <span className="h-3 w-3 rounded-sm bg-emerald-200 ring-1 ring-emerald-300/60" />
             <span className="h-3 w-3 rounded-sm bg-emerald-400 ring-1 ring-emerald-500/50" />
             <span className="h-3 w-3 rounded-sm bg-emerald-600 ring-1 ring-emerald-700/40" />
           </div>
-          <span>More</span>
+          <span>{t("calendar.more")}</span>
         </div>
       </div>
 
@@ -286,7 +289,7 @@ export default function TrainingActivityCalendar({
           </p>
           {(activityByDate[selectedKey]?.sessions ?? 0) === 0 ? (
             <p className="mt-3 text-sm text-slate-600">
-              No training sessions logged on this day (demo).
+              {t("calendar.emptyDay")}
             </p>
           ) : (
             <ul className="mt-3 space-y-3">
@@ -296,18 +299,20 @@ export default function TrainingActivityCalendar({
                   className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm transition-all duration-200 hover:border-brand-100 hover:shadow-sm sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="font-medium text-slate-900">{rec.taskName}</p>
+                    <p className="font-medium text-slate-900">{taskName(t, rec.taskName)}</p>
                     <p className="text-slate-600">
-                      Score{" "}
-                      {rec.score != null ? `${rec.score}/100` : "—"} · {rec.reliability} ·
-                      Instructor: {rec.instructorStatus}
+                      {t("calendar.recordLine", {
+                        score: rec.score != null ? `${rec.score}/100` : "—",
+                        reliability: reliabilityLabel(t, rec.reliability),
+                        status: reviewStatusLabel(t, rec.instructorStatus),
+                      })}
                     </p>
                   </div>
                   <Link
                     to={{ pathname: "/report", search: reportSearch(rec.sessionId) }}
                     className="shrink-0 rounded-md bg-brand-600 px-3 py-1.5 text-center text-xs font-semibold text-white transition-all duration-200 hover:bg-brand-700 hover:shadow-md active:scale-[0.98]"
                   >
-                    View report
+                    {t("calendar.viewReport")}
                   </Link>
                 </li>
               ))}

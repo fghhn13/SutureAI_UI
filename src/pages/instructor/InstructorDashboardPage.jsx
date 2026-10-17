@@ -5,22 +5,25 @@ import ScoreHeatmap from "../../components/charts/ScoreHeatmap.jsx";
 import Sparkline from "../../components/charts/Sparkline.jsx";
 import StatTile from "../../components/charts/StatTile.jsx";
 import { CHART } from "../../components/charts/tokens.js";
+import { attentionText, dimensionName, useI18n } from "../../i18n/index.js";
 import { InstructorShell, LoadError, SeverityBadge, relativeDays, reportLink, signed } from "./shared.jsx";
 
+/** Column labels: instructor.overview.columns.<key>. */
 const COLUMNS = [
-  { key: "name", label: "Student", sort: (r) => r.name.toLowerCase() },
-  { key: "lastActive", label: "Last active", sort: (r) => r.daysSinceActive ?? Infinity },
-  { key: "sessions", label: "Sessions 7d / 30d", sort: (r) => -r.sessions30d },
-  { key: "latest", label: "Latest", sort: (r) => r.latestScore ?? -1 },
-  { key: "trend", label: "Trend" },
-  { key: "change", label: "Change", sort: (r) => r.recentChange ?? 0 },
-  { key: "weakest", label: "Weakest dimension", sort: (r) => r.weakestDimension ?? "~" },
-  { key: "pending", label: "To review", sort: (r) => -(r.pendingReviews + r.openAppeals) },
+  { key: "name", sort: (r) => r.name.toLowerCase() },
+  { key: "lastActive", sort: (r) => r.daysSinceActive ?? Infinity },
+  { key: "sessions", sort: (r) => -r.sessions30d },
+  { key: "latest", sort: (r) => r.latestScore ?? -1 },
+  { key: "trend" },
+  { key: "change", sort: (r) => r.recentChange ?? 0 },
+  { key: "weakest", sort: (r) => r.weakestDimension ?? "~" },
+  { key: "pending", sort: (r) => -(r.pendingReviews + r.openAppeals) },
 ];
 
 function AttentionList({ items }) {
+  const { t } = useI18n();
   if (!items.length) {
-    return <p className="mt-4 text-sm text-slate-600">Nothing needs your attention right now.</p>;
+    return <p className="mt-4 text-sm text-slate-600">{t("instructor.overview.attentionEmpty")}</p>;
   }
   return (
     <ul className="mt-4 space-y-2">
@@ -34,11 +37,11 @@ function AttentionList({ items }) {
             <Link to={`/instructor/students/${a.studentId}`} className="font-semibold text-slate-900 hover:underline">
               {a.studentName}
             </Link>
-            <p className="text-slate-600">{a.message}</p>
+            <p className="text-slate-600">{attentionText(t, a)}</p>
           </div>
           {a.sessionId ? (
             <Link to={reportLink(a.sessionId)} className="link-brand shrink-0 text-xs">
-              Open report
+              {t("instructor.overview.openReport")}
             </Link>
           ) : null}
         </li>
@@ -48,6 +51,7 @@ function AttentionList({ items }) {
 }
 
 function Roster({ students }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ key: "pending", dir: 1 });
 
@@ -67,14 +71,15 @@ function Roster({ students }) {
     <section className="surface-card mt-6 p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Students</h2>
-          <p className="text-sm text-slate-600">Click a column to sort; open a student for their full history.</p>
+          <h2 className="text-lg font-semibold text-slate-900">{t("instructor.overview.studentsTitle")}</h2>
+          <p className="text-sm text-slate-600">{t("instructor.overview.studentsSubtitle")}</p>
         </div>
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search students"
+          placeholder={t("instructor.overview.search")}
+          aria-label={t("instructor.overview.search")}
           className="w-56 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
         />
       </div>
@@ -90,11 +95,11 @@ function Roster({ students }) {
                       onClick={() => setSort((s) => ({ key: c.key, dir: s.key === c.key ? -s.dir : 1 }))}
                       className="uppercase hover:text-slate-800"
                     >
-                      {c.label}
+                      {t(`instructor.overview.columns.${c.key}`)}
                       {sort.key === c.key ? (sort.dir > 0 ? " ↑" : " ↓") : ""}
                     </button>
                   ) : (
-                    c.label
+                    t(`instructor.overview.columns.${c.key}`)
                   )}
                 </th>
               ))}
@@ -110,8 +115,8 @@ function Roster({ students }) {
                   <p className="text-xs text-slate-500">{s.email}</p>
                 </td>
                 <td className="py-3 pr-4 text-slate-700">
-                  {relativeDays(s.daysSinceActive)}
-                  {s.inProgress ? <p className="text-xs text-brand-700">{s.inProgress} processing</p> : null}
+                  {relativeDays(t, s.daysSinceActive)}
+                  {s.inProgress ? <p className="text-xs text-brand-700">{t("instructor.counts.processing", { count: s.inProgress })}</p> : null}
                 </td>
                 <td className="py-3 pr-4 tabular-nums text-slate-700">
                   {s.sessions7d} / {s.sessions30d}
@@ -130,18 +135,18 @@ function Roster({ students }) {
                     </span>
                   )}
                 </td>
-                <td className="py-3 pr-4 text-slate-700">{s.weakestDimension ?? "—"}</td>
+                <td className="py-3 pr-4 text-slate-700">{dimensionName(t, s.weakestDimension)}</td>
                 <td className="py-3 pr-4">
                   {s.pendingReviews ? (
                     <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900">
-                      {s.pendingReviews} report{s.pendingReviews > 1 ? "s" : ""}
+                      {t("instructor.counts.reports", { count: s.pendingReviews })}
                     </span>
                   ) : (
                     <span className="text-xs text-slate-400">—</span>
                   )}
                   {s.openAppeals ? (
                     <span className="ml-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800">
-                      {s.openAppeals} appeal{s.openAppeals > 1 ? "s" : ""}
+                      {t("instructor.counts.appeals", { count: s.openAppeals })}
                     </span>
                   ) : null}
                 </td>
@@ -149,16 +154,17 @@ function Roster({ students }) {
             ))}
           </tbody>
         </table>
-        {!rows.length ? <p className="py-6 text-center text-sm text-slate-500">No students match.</p> : null}
+        {!rows.length ? <p className="py-6 text-center text-sm text-slate-500">{t("instructor.overview.noMatch")}</p> : null}
       </div>
       <p className="mt-3 text-xs text-slate-500">
-        Trend: last 8 report scores. Change: average of the last 3 reports vs the 3 before them.
+        {t("instructor.overview.footnote")}
       </p>
     </section>
   );
 }
 
 export default function InstructorDashboardPage() {
+  const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const [cohorts, setCohorts] = useState(null);
   const [data, setData] = useState(null);
@@ -198,7 +204,7 @@ export default function InstructorDashboardPage() {
   if (cohorts && cohorts.length === 0) {
     return (
       <InstructorShell>
-        <p className="py-16 text-center text-slate-600">You are not assigned to any cohort yet.</p>
+        <p className="py-16 text-center text-slate-600">{t("instructor.overview.noCohort")}</p>
       </InstructorShell>
     );
   }
@@ -208,9 +214,9 @@ export default function InstructorDashboardPage() {
     <InstructorShell>
       {/* Filter row: scopes everything below. */}
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold text-slate-900">Class overview</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t("instructor.overview.title")}</h1>
         <label className="ml-auto flex items-center gap-2 text-sm text-slate-600">
-          Cohort
+          {t("instructor.overview.cohort")}
           <select
             value={cohortId ?? ""}
             onChange={(e) => setSearchParams({ cohort: e.target.value })}
@@ -226,50 +232,54 @@ export default function InstructorDashboardPage() {
       </div>
 
       {!data ? (
-        <p className="py-16 text-center text-sm text-slate-500">Loading class overview…</p>
+        <p className="py-16 text-center text-sm text-slate-500">{t("instructor.overview.loading")}</p>
       ) : (
         <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <StatTile label="Students" value={k.students} hint={`${k.activeStudents7d} trained this week`} />
             <StatTile
-              label="Sessions this week"
+              label={t("instructor.overview.kpiStudents")}
+              value={k.students}
+              hint={t("instructor.overview.kpiActive", { count: k.activeStudents7d })}
+            />
+            <StatTile
+              label={t("instructor.overview.kpiSessions")}
               value={k.sessions7d}
               delta={k.sessions7d - k.sessionsPrev7d}
-              deltaLabel="vs previous week"
+              deltaLabel={t("instructor.overview.kpiSessionsDelta")}
             />
             <StatTile
-              label="Average score, 30 days"
+              label={t("instructor.overview.kpiAvgScore")}
               value={k.avgScore30d != null ? Math.round(k.avgScore30d) : "—"}
               delta={k.avgScore30d != null && k.avgScorePrev30d != null ? k.avgScore30d - k.avgScorePrev30d : null}
-              deltaLabel="vs previous 30 days"
-              hint="No reports in the last 30 days"
+              deltaLabel={t("instructor.overview.kpiAvgScoreDelta")}
+              hint={t("instructor.overview.kpiAvgScoreEmpty")}
             />
             <StatTile
-              label="Reports to review"
+              label={t("instructor.overview.kpiToReview")}
               value={k.pendingReviews}
-              hint="Open review queue →"
+              hint={t("instructor.overview.kpiToReviewHint")}
               to={`/instructor/reviews?cohort=${encodeURIComponent(data.cohort.id)}`}
             />
             <StatTile
-              label="Open appeals"
+              label={t("instructor.overview.kpiAppeals")}
               value={k.openAppeals}
-              hint="Students disputing a finding →"
+              hint={t("instructor.overview.kpiAppealsHint")}
               to={`/instructor/reviews?filter=appeals&cohort=${encodeURIComponent(data.cohort.id)}`}
             />
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-5">
             <section className="surface-card p-6 lg:col-span-2">
-              <h2 className="text-lg font-semibold text-slate-900">Needs attention</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{t("instructor.overview.attentionTitle")}</h2>
               <p className="text-sm text-slate-600">
-                Appeals, declining or low scores, inactivity and failed uploads.
+                {t("instructor.overview.attentionSubtitle")}
               </p>
               <AttentionList items={data.attention} />
             </section>
             <section className="surface-card p-6 lg:col-span-3">
-              <h2 className="text-lg font-semibold text-slate-900">Skill map</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{t("instructor.overview.skillMapTitle")}</h2>
               <p className="text-sm text-slate-600">
-                Where each student is strong or weak. Paler cells are lower scores.
+                {t("instructor.overview.skillMapSubtitle")}
               </p>
               <div className="mt-4">
                 <ScoreHeatmap

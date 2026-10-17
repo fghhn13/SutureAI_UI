@@ -1,3 +1,4 @@
+import { useI18n } from "../../i18n/index.js";
 import { CHART } from "./tokens.js";
 
 /**
@@ -6,6 +7,7 @@ import { CHART } from "./tokens.js";
  * @param {{ values: number[], width?: number, height?: number, minSpan?: number, label?: string }} props
  */
 export default function Sparkline({ values, width = 96, height = 28, minSpan = 20, label }) {
+  const { t } = useI18n();
   if (!values?.length) {
     return <span className="text-xs text-slate-400">—</span>;
   }
@@ -20,7 +22,7 @@ export default function Sparkline({ values, width = 96, height = 28, minSpan = 2
   const y = (v) => pad + (1 - (Math.min(max, Math.max(min, v)) - min) / (max - min)) * (height - 2 * pad);
   const d = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
   const last = values.length - 1;
-  const text = label ?? `Last ${values.length} scores: ${values.join(", ")}`;
+  const text = label ?? t("charts.sparkline", { count: values.length, values: values.join(", ") });
 
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={text}>
