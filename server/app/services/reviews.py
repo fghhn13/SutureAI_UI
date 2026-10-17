@@ -179,7 +179,13 @@ def report_view(ts: TrainingSession, viewer: User, lang: str = "en") -> dict[str
     content["assessmentHighlights"] = highlights
     content["review"] = review_out(review)
     content["feedback"] = feedback_out(ts.feedback)
-    content["appeals"] = [appeal_out(a) for a in ts.appeals]
+    # The appeal stores an English snapshot of the event; show the title in the viewer's
+    # language when the event is still in the (localised) timeline.
+    titles = {e.get("id"): e.get("title") for e in timeline}
+    content["appeals"] = [
+        {**out, "eventLabel": titles.get(a.event_id) or out["eventLabel"]}
+        for a, out in ((a, appeal_out(a)) for a in ts.appeals)
+    ]
     content["personalNote"] = (ts.note.note if ts.note else "") if is_owner else None
     content["scores"] = {
         "ai": ts.report.overall_score,

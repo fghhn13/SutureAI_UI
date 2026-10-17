@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, apiUrl } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import LanguageSwitch from "../components/LanguageSwitch.jsx";
 import {
   clipTypeLabel,
   formatDate,
@@ -622,7 +623,8 @@ function TrainingReportPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedId, reportRetryToken]);
+    // Refetch on language change: the server returns report text in the requested language.
+  }, [selectedId, reportRetryToken, locale]);
 
   const selectReport = (id) => {
     setSelectedId(id);
@@ -872,6 +874,7 @@ function TrainingReportPage() {
           >
             {t("report.exportPdf")}
           </button>
+          <LanguageSwitch />
           {isStaff ? (
             <>
               <span className="hidden sm:inline text-slate-300">|</span>

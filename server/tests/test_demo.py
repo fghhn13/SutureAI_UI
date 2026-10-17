@@ -126,3 +126,17 @@ def test_report_in_chinese(alex, app):
     s2, _ = run(app, alex, "other.mp4")
     zh2 = alex.get(f"/api/reports/{s2['id']}", headers={"Accept-Language": "zh"}).json()
     assert zh2["reliability"].endswith("置信度") and zh2["aiFeedback"][0].startswith("总分")
+
+
+def test_appeal_title_follows_language(alex, app):
+    s, _ = run(app, alex, "suture_1.mp4")
+    report = alex.get(f"/api/reports/{s['id']}").json()
+    wrong_tool = next(e for e in report["timeline"] if e["code"] == "wrong_tool")
+    alex.post(
+        f"/api/reports/{s['id']}/appeals",
+        json={"eventId": wrong_tool["id"], "reason": "misdetected", "message": "Never used the scissors."},
+    )
+    zh = alex.get(f"/api/reports/{s['id']}", headers={"Accept-Language": "zh-CN"}).json()
+    en = alex.get(f"/api/reports/{s['id']}", headers={"Accept-Language": "en"}).json()
+    assert zh["appeals"][0]["eventLabel"] == "左手拿错器械"
+    assert en["appeals"][0]["eventLabel"] == "Wrong tool in left hand"
