@@ -24,6 +24,7 @@ from ..providers.base import (
     ScoringProvider,
     UserFacingError,
 )
+from ..providers.dimensions import DIMENSIONS
 
 log = logging.getLogger(__name__)
 
@@ -184,6 +185,7 @@ class Pipeline:
                 recorded_at=ts.uploaded_at or ts.created_at,
                 scoring=ts.scoring.raw,
                 previous_score=previous_score(db, ts),
+                previous_dimensions=previous_dimension_scores(db, ts),
                 evidence_video_url=video_url(ts.id) if ts.video else None,
                 progress=self._progress_writer(session_id, *REPORT_SPAN),
             )
@@ -218,9 +220,9 @@ class Pipeline:
                 db.commit()
 
 
-def previous_score(db: Session, ts: TrainingSession) -> int | None:
+def previous_report(db: Session, ts: TrainingSession) -> Report | None:
     return db.scalar(
-        select(Report.overall_score)
+        select(Report)
         .join(TrainingSession, Report.session_id == TrainingSession.id)
         .where(
             TrainingSession.user_id == ts.user_id,
@@ -230,6 +232,24 @@ def previous_score(db: Session, ts: TrainingSession) -> int | None:
         .order_by(TrainingSession.created_at.desc())
         .limit(1)
     )
+
+
+def previous_score(db: Session, ts: TrainingSession) -> int | None:
+    prev = previous_report(db, ts)
+    return prev.overall_score if prev else None
+
+
+def previous_dimension_scores(db: Session, ts: TrainingSession) -> dict[str, int] | None:
+    """Dimension key -> score of the previous report (reports store display names)."""
+    prev = previous_report(db, ts)
+    if prev is None:
+        return None
+    by_name = {d.name: d.key for d in DIMENSIONS}
+    return {
+        by_name[d["name"]]: int(d["score"])
+        for d in prev.content.get("dimensions", [])
+        if d.get("name") in by_name and isinstance(d.get("score"), (int, float))
+    }
 
 
 def save_report(database: Database, session_id: str, generator: str, content: dict[str, Any]) -> None:

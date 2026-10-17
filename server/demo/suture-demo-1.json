@@ -5,28 +5,202 @@
   "completed": false,
   "durationSeconds": 116,
   "dimensions": [
-    { "key": "efficiency", "score": 62, "metrics": { "idleRatio": 0.21, "repeatedAttempts": 2 } },
-    { "key": "accuracy", "score": 64, "metrics": { "threadingAttempts": 2, "insertionAttempts": 1 } },
-    { "key": "procedural_flow", "score": 68, "metrics": { "stepsCompleted": 9, "stepsTotal": 11, "reworkCount": 2 } },
-    { "key": "safety", "score": 72, "metrics": { "wrongToolEvents": 1, "needleDrops": 0 } },
-    { "key": "product_quality", "score": 64, "metrics": { "knotThrows": 3, "segmentsCompleted": 1 } }
+    {
+      "key": "efficiency",
+      "score": 62,
+      "metrics": {
+        "idleRatio": 0.21,
+        "repeatedAttempts": 2
+      }
+    },
+    {
+      "key": "accuracy",
+      "score": 64,
+      "metrics": {
+        "threadingAttempts": 2,
+        "insertionAttempts": 1
+      }
+    },
+    {
+      "key": "procedural_flow",
+      "score": 68,
+      "metrics": {
+        "stepsCompleted": 9,
+        "stepsTotal": 11,
+        "reworkCount": 2
+      }
+    },
+    {
+      "key": "safety",
+      "score": 72,
+      "metrics": {
+        "wrongToolEvents": 1,
+        "needleDrops": 0
+      }
+    },
+    {
+      "key": "product_quality",
+      "score": 64,
+      "metrics": {
+        "knotThrows": 3,
+        "segmentsCompleted": 1
+      }
+    }
   ],
   "events": [
-    { "t": 2, "severity": "normal", "code": "task_start", "label": "Task start detected", "detail": "Segment 1 begins; both hands enter the working area.", "clip": false },
-    { "t": 3, "severity": "error", "code": "wrong_tool", "label": "Wrong tool in left hand", "detail": "Observed tool: scissors. Expected tool: forceps.", "clip": true },
-    { "t": 5, "severity": "normal", "code": "tool_corrected", "label": "Switched to correct tool", "detail": "Forceps picked up; task continues.", "clip": false },
-    { "t": 17, "severity": "normal", "code": "threading_attempt", "label": "First threading attempt", "detail": "Needle tip approaches the eye of the thread.", "clip": false },
-    { "t": 26, "severity": "warning", "code": "threading_failed", "label": "Threading failed", "detail": "First pass did not go through; hand tremor visible before the retry.", "clip": true },
-    { "t": 27, "severity": "normal", "code": "threading_attempt", "label": "Second threading attempt", "detail": "Retry starts immediately after the failed pass.", "clip": false },
-    { "t": 35, "severity": "normal", "code": "threading_success", "label": "Threading succeeded", "detail": "Thread passes through on the second attempt.", "clip": true },
-    { "t": 45, "severity": "normal", "code": "knot_start", "label": "Knotting started", "detail": "Instrument tie begins.", "clip": false },
-    { "t": 53, "severity": "normal", "code": "knot_throw_1", "label": "First knot throw completed", "detail": "Throw laid flat.", "clip": false },
-    { "t": 58, "severity": "normal", "code": "knot_throw_2", "label": "Second knot throw completed", "detail": "Throw laid flat; direction alternated.", "clip": false },
-    { "t": 62, "severity": "normal", "code": "knot_throw_3", "label": "Third knot throw completed", "detail": "Square knot sequence finished.", "clip": false },
-    { "t": 73, "severity": "normal", "code": "segment_complete", "label": "Segment 1 complete", "detail": "End of the first practice segment.", "clip": true },
-    { "t": 83, "severity": "normal", "code": "task_start", "label": "Task start detected (segment 2)", "detail": "Second segment begins.", "clip": false },
-    { "t": 96, "severity": "normal", "code": "threading_attempt", "label": "First threading attempt (segment 2)", "detail": "Needle approaches the thread.", "clip": false },
-    { "t": 114, "severity": "error", "code": "recording_interrupted", "label": "Recording interrupted", "detail": "Video stops before threading in segment 2 was completed.", "clip": true }
+    {
+      "t": 2,
+      "severity": "normal",
+      "code": "task_start",
+      "label": "Task start detected",
+      "detail": "Segment 1 begins; both hands enter the working area.",
+      "clip": false,
+      "labelZh": "检测到任务开始",
+      "detailZh": "第一段开始，双手进入操作区。"
+    },
+    {
+      "t": 3,
+      "severity": "error",
+      "code": "wrong_tool",
+      "label": "Wrong tool in left hand",
+      "detail": "Observed tool: scissors. Expected tool: forceps.",
+      "clip": true,
+      "labelZh": "左手拿错器械",
+      "detailZh": "识别到的器械：剪刀。应使用：镊子。",
+      "impact": 5
+    },
+    {
+      "t": 5,
+      "severity": "normal",
+      "code": "tool_corrected",
+      "label": "Switched to correct tool",
+      "detail": "Forceps picked up; task continues.",
+      "clip": false,
+      "labelZh": "换成了正确的器械",
+      "detailZh": "拿起镊子，任务继续。"
+    },
+    {
+      "t": 17,
+      "severity": "normal",
+      "code": "threading_attempt",
+      "label": "First threading attempt",
+      "detail": "Needle tip approaches the eye of the thread.",
+      "clip": false,
+      "labelZh": "第一次尝试穿针",
+      "detailZh": "针尖靠近线头。"
+    },
+    {
+      "t": 26,
+      "severity": "warning",
+      "code": "threading_failed",
+      "label": "Threading failed",
+      "detail": "First pass did not go through; hand tremor visible before the retry.",
+      "clip": true,
+      "labelZh": "穿针失败",
+      "detailZh": "第一次没有穿过；重试前可见手部抖动。",
+      "impact": 9
+    },
+    {
+      "t": 27,
+      "severity": "normal",
+      "code": "threading_attempt",
+      "label": "Second threading attempt",
+      "detail": "Retry starts immediately after the failed pass.",
+      "clip": false,
+      "labelZh": "第二次尝试穿针",
+      "detailZh": "失败后立即重试。"
+    },
+    {
+      "t": 35,
+      "severity": "normal",
+      "code": "threading_success",
+      "label": "Threading succeeded",
+      "detail": "Thread passes through on the second attempt.",
+      "clip": true,
+      "labelZh": "穿针成功",
+      "detailZh": "第二次尝试穿线成功。"
+    },
+    {
+      "t": 45,
+      "severity": "normal",
+      "code": "knot_start",
+      "label": "Knotting started",
+      "detail": "Instrument tie begins.",
+      "clip": false,
+      "labelZh": "开始打结",
+      "detailZh": "开始器械打结。"
+    },
+    {
+      "t": 53,
+      "severity": "normal",
+      "code": "knot_throw_1",
+      "label": "First knot throw completed",
+      "detail": "Throw laid flat.",
+      "clip": false,
+      "labelZh": "第 1 个结完成",
+      "detailZh": "线结放平。"
+    },
+    {
+      "t": 58,
+      "severity": "normal",
+      "code": "knot_throw_2",
+      "label": "Second knot throw completed",
+      "detail": "Throw laid flat; direction alternated.",
+      "clip": false,
+      "labelZh": "第 2 个结完成",
+      "detailZh": "线结放平，方向交替。"
+    },
+    {
+      "t": 62,
+      "severity": "normal",
+      "code": "knot_throw_3",
+      "label": "Third knot throw completed",
+      "detail": "Square knot sequence finished.",
+      "clip": false,
+      "labelZh": "第 3 个结完成",
+      "detailZh": "方结完成。"
+    },
+    {
+      "t": 73,
+      "severity": "normal",
+      "code": "segment_complete",
+      "label": "Segment 1 complete",
+      "detail": "End of the first practice segment.",
+      "clip": true,
+      "labelZh": "第一段完成",
+      "detailZh": "第一段练习结束。"
+    },
+    {
+      "t": 83,
+      "severity": "normal",
+      "code": "task_start",
+      "label": "Task start detected (segment 2)",
+      "detail": "Second segment begins.",
+      "clip": false,
+      "labelZh": "检测到任务开始（第二段）",
+      "detailZh": "第二段开始。"
+    },
+    {
+      "t": 96,
+      "severity": "normal",
+      "code": "threading_attempt",
+      "label": "First threading attempt (segment 2)",
+      "detail": "Needle approaches the thread.",
+      "clip": false,
+      "labelZh": "第一次尝试穿针（第二段）",
+      "detailZh": "针靠近线。"
+    },
+    {
+      "t": 114,
+      "severity": "error",
+      "code": "recording_interrupted",
+      "label": "Recording interrupted",
+      "detail": "Video stops before threading in segment 2 was completed.",
+      "clip": true,
+      "labelZh": "录像中断",
+      "detailZh": "第二段穿针完成前视频就结束了。",
+      "impact": 6
+    }
   ],
   "notes": [
     "After the segment-2 interruption there is no further footage; scoring relies mainly on segment 1 and the part of segment 2 before the cut."
@@ -43,9 +217,26 @@
       "Segment 2 was interrupted, so the full sequence cannot be reviewed."
     ],
     "suggestions": [
-      "Drill needle-thread alignment with fixed hand rests to reduce tremor.",
-      "Lay out instruments in a fixed order and check the left hand before starting.",
-      "Record segment 2 again from start to finish."
+      {
+        "text": "Drill needle-thread alignment with both wrists resting on the table: bring the thread to the needle. 10 reps.",
+        "times": [
+          17,
+          26,
+          27
+        ]
+      },
+      {
+        "text": "Lay instruments out in a fixed order and name each one before you pick it up.",
+        "times": [
+          3
+        ]
+      },
+      {
+        "text": "Record segment 2 again from start to finish.",
+        "times": [
+          114
+        ]
+      }
     ],
     "aiFeedback": [
       "Overall score 66/100: motion smoothness and threading success rate are below this stage's target.",
@@ -63,6 +254,60 @@
       "Procedural Flow": "Knot sequence completed, but the initial tool selection was wrong.",
       "Safety": "No high-risk behaviour; the tool mix-up was corrected quickly.",
       "Product Quality": "Knot quality acceptable; segment 2 could not be assessed."
+    },
+    "zh": {
+      "duration": "1分56秒（两段，第二段中断）",
+      "summary": "最需要改进的是穿针：手部抖动、动作不够平稳，第二次才穿成功。开头拿错器械但很快纠正。第二段在穿针完成前录像中断。",
+      "strengths": [
+        "拿错器械后迅速纠正（2 秒内）。",
+        "第一段的三个方结完成得干净利落。"
+      ],
+      "weaknesses": [
+        "穿针需要两次，手部稳定性仍然不足。",
+        "第二段中断，无法评估完整流程。"
+      ],
+      "suggestions": [
+        {
+          "text": "双手手腕贴住桌面练习穿针：用线去找针，连续 10 次。",
+          "times": [
+            17,
+            26,
+            27
+          ]
+        },
+        {
+          "text": "器械按固定顺序摆放，拿起前先说出器械名称。",
+          "times": [
+            3
+          ]
+        },
+        {
+          "text": "把第二段从头到尾完整重录一遍。",
+          "times": [
+            114
+          ]
+        }
+      ],
+      "aiFeedback": [
+        "总分 66/100：动作平稳度和穿针成功率低于本阶段目标。",
+        "0:03 拿错器械的时间很短且及时纠正，但仍会影响流程规范分。",
+        "1:54 的中断让后半段缺少评估依据。"
+      ],
+      "assessmentHighlights": {
+        "strongestDimension": "安全性",
+        "mainIssue": "穿针熟练度与录像完整性",
+        "practiceFocus": "稳定穿针、完整录制"
+      },
+      "dimensionExplanations": {
+        "Efficiency": "停顿和第二次穿针拖慢了整体节奏，低于同组水平。",
+        "Accuracy": "第二次才穿针成功，细微调整不够稳定。",
+        "Procedural Flow": "打结流程完整，但开头器械选择错误。",
+        "Safety": "没有高风险行为；拿错器械很快纠正。",
+        "Product Quality": "线结质量合格；第二段无法评估。"
+      }
     }
-  }
+  },
+  "notesZh": [
+    "第二段在中断后没有更多画面，评分主要依据第一段和第二段中断前的部分。"
+  ]
 }

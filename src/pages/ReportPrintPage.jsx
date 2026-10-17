@@ -184,6 +184,51 @@ export default function ReportPrintPage() {
           </p>
         </Section>
 
+        {report.focus?.title ? (
+          <Section title="Fix this first">
+            <div className="rounded border-l-4 border-rose-500 bg-rose-50/50 px-3 py-2">
+              <p className="font-semibold">
+                {report.focus.title}
+                {report.focus.impact ? <span className="font-normal text-slate-600"> · about −{report.focus.impact} pts</span> : null}
+                {report.focus.times?.length ? (
+                  <span className="font-normal text-slate-600"> · at {report.focus.times.map(clock).join(", ")}</span>
+                ) : null}
+              </p>
+              <p className="text-slate-700">{report.focus.why}</p>
+              {report.focus.drill ? <p className="mt-1"><strong>Practice:</strong> {report.focus.drill}</p> : null}
+            </div>
+          </Section>
+        ) : null}
+
+        {report.pointsLost?.length ? (
+          <Section title={`Where the ${100 - report.overallScore} points went`}>
+            <table className="w-full border-collapse">
+              <tbody>
+                {report.pointsLost.map((p, i) => (
+                  <tr key={i} className="border-b border-slate-100">
+                    <td className="py-1">{p.label}</td>
+                    <td className="w-44 py-1">
+                      <div className="h-2 rounded bg-slate-100">
+                        <div
+                          className={`h-2 rounded ${p.code ? "bg-rose-600" : "bg-slate-400"}`}
+                          style={{ width: `${(p.points / Math.max(...report.pointsLost.map((x) => x.points))) * 100}%` }}
+                        />
+                      </div>
+                    </td>
+                    <td className="w-12 py-1 text-right font-semibold tabular-nums">−{p.points}</td>
+                    <td className="w-28 py-1 pl-3 font-mono text-xs text-slate-500">{(p.times ?? []).map(clock).join(" ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {report.keyMetrics?.length ? (
+              <p className="mt-2 text-xs text-slate-600">
+                {report.keyMetrics.map((m) => `${m.ok ? "✓" : "✕"} ${m.label} ${m.display} (target ${m.target})`).join("   ")}
+              </p>
+            ) : null}
+          </Section>
+        ) : null}
+
         <Section title="Dimension scores">
           <table className="w-full border-collapse">
             <tbody>
@@ -251,8 +296,13 @@ export default function ReportPrintPage() {
 
         <Section title="Recommended next steps">
           <ol className="list-decimal pl-5">
-            {report.suggestions.map((s) => (
-              <li key={s}>{s}</li>
+            {(report.suggestionDetails ?? report.suggestions.map((text) => ({ text, times: [] }))).map((item) => (
+              <li key={item.text}>
+                {item.text}
+                {item.times?.length ? (
+                  <span className="ml-1 font-mono text-xs text-slate-500">({item.times.map(clock).join(", ")})</span>
+                ) : null}
+              </li>
             ))}
           </ol>
         </Section>

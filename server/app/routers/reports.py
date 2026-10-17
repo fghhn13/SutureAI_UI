@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -51,6 +51,10 @@ def list_reports(
     return items
 
 
+def _lang(request: Request) -> str:
+    return reviews.preferred_lang(request.headers.get("accept-language"))
+
+
 def _ready(ts: TrainingSession) -> TrainingSession:
     if ts.report is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Report is not ready yet.")
@@ -59,14 +63,16 @@ def _ready(ts: TrainingSession) -> TrainingSession:
 
 @router.get("/{session_id}")
 def get_report(
+    request: Request,
     ts: TrainingSession = Depends(get_owned_session),
     user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    return reviews.report_view(_ready(ts), user)
+    return reviews.report_view(_ready(ts), user, _lang(request))
 
 
 @router.put("/{session_id}/review")
 def put_review(
+    request: Request,
     body: ReviewIn,
     ts: TrainingSession = Depends(get_owned_session),
     db: Session = Depends(get_db),
@@ -85,7 +91,7 @@ def put_review(
         )
     except reviews.ReviewError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
-    return reviews.report_view(ts, instructor)
+    return reviews.report_view(ts, instructor, _lang(request))
 
 
 def _decide(fn, *args, **kwargs):
@@ -102,6 +108,7 @@ def _require_owner(ts: TrainingSession, user: User) -> None:
 
 @router.post("/{session_id}/accept")
 def accept_report(
+    request: Request,
     body: AcceptIn,
     ts: TrainingSession = Depends(get_owned_session),
     db: Session = Depends(get_db),
@@ -110,11 +117,12 @@ def accept_report(
     """Student accepts the report as it stands."""
     _require_owner(ts, user)
     _decide(reviews.accept_report, db, _ready(ts), user, message=body.message)
-    return reviews.report_view(ts, user)
+    return reviews.report_view(ts, user, _lang(request))
 
 
 @router.post("/{session_id}/appeals", status_code=status.HTTP_201_CREATED)
 def create_appeal(
+    request: Request,
     body: AppealIn,
     ts: TrainingSession = Depends(get_owned_session),
     db: Session = Depends(get_db),
@@ -126,11 +134,12 @@ def create_appeal(
         reviews.create_appeal, db, _ready(ts), user,
         event_id=body.event_id, reason=body.reason, message=body.message,
     )
-    return reviews.report_view(ts, user)
+    return reviews.report_view(ts, user, _lang(request))
 
 
 @router.delete("/{session_id}/appeals/{appeal_id}")
 def withdraw_appeal(
+    request: Request,
     appeal_id: int,
     ts: TrainingSession = Depends(get_owned_session),
     db: Session = Depends(get_db),
@@ -138,11 +147,12 @@ def withdraw_appeal(
 ) -> dict[str, Any]:
     _require_owner(ts, user)
     _decide(reviews.withdraw_appeal, db, _ready(ts), appeal_id)
-    return reviews.report_view(ts, user)
+    return reviews.report_view(ts, user, _lang(request))
 
 
 @router.post("/{session_id}/appeals/{appeal_id}/decision")
 def decide_appeal(
+    request: Request,
     appeal_id: int,
     body: AppealDecisionIn,
     ts: TrainingSession = Depends(get_owned_session),
@@ -154,11 +164,12 @@ def decide_appeal(
         reviews.decide_appeal, db, _ready(ts), instructor, appeal_id,
         accept=body.decision == "accept", note=body.note, score_adjustment=body.score_adjustment,
     )
-    return reviews.report_view(ts, instructor)
+    return reviews.report_view(ts, instructor, _lang(request))
 
 
 @router.put("/{session_id}/note")
 def put_note(
+    request: Request,
     body: NoteIn,
     ts: TrainingSession = Depends(get_owned_session),
     db: Session = Depends(get_db),
@@ -166,4 +177,4 @@ def put_note(
 ) -> dict[str, Any]:
     _require_owner(ts, user)
     reviews.save_note(db, _ready(ts), body.note)
-    return reviews.report_view(ts, user)
+    return reviews.report_view(ts, user, _lang(request))

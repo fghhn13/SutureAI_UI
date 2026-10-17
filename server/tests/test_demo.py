@@ -92,3 +92,37 @@ def test_old_database_gets_new_columns(tmp_path):
     cols = {c["name"] for c in inspect(db.engine).get_columns("training_sessions")}
     assert {"progress", "stage"} <= cols
     db.engine.dispose()
+
+
+def test_report_leads_with_focus_and_points(alex, app):
+    s, _ = run(app, alex, "suture_1.mp4")
+    report = alex.get(f"/api/reports/{s['id']}").json()
+    # The costliest annotated issue (threading, impact 9) is the one thing to fix first.
+    assert report["focus"]["code"] == "threading_failed"
+    assert report["focus"]["timeSeconds"] == 26 and report["focus"]["drill"]
+    # Points lost add up to what the student lost overall.
+    assert sum(p["points"] for p in report["pointsLost"]) == 100 - report["overallScore"]
+    assert report["pointsLost"][0]["code"] == "threading_failed"
+    # Suggestions are linked to moments in the video.
+    assert report["suggestionDetails"][0]["times"] == [17, 26, 27]
+    assert report["suggestions"][0] == report["suggestionDetails"][0]["text"]
+    assert {m["key"] for m in report["keyMetrics"]} >= {"threadingAttempts", "wrongToolEvents"}
+    assert all("from" in c and "to" in c and c["name"] for c in report["changes"])
+    assert report["durationSeconds"] == 116 and "i18n" not in report
+
+
+def test_report_in_chinese(alex, app):
+    s, _ = run(app, alex, "suture_1.mp4")
+    zh = alex.get(f"/api/reports/{s['id']}", headers={"Accept-Language": "zh-CN,zh;q=0.9"}).json()
+    en = alex.get(f"/api/reports/{s['id']}", headers={"Accept-Language": "en-US"}).json()
+    assert zh["meta"]["lang"] == "zh" and en["meta"]["lang"] == "en"
+    assert zh["reportTitle"] == "训练报告" and zh["task"] == "简单缝合练习"
+    assert zh["timeline"][1]["title"] == "左手拿错器械"
+    assert zh["timeline"][1]["timeSeconds"] == en["timeline"][1]["timeSeconds"]  # structure kept
+    assert zh["dimensions"][0]["name"] == "效率" and zh["dimensions"][0]["score"] == en["dimensions"][0]["score"]
+    assert zh["focus"]["title"] == "穿针不止一次才成功" and zh["focus"]["impact"] == en["focus"]["impact"]
+    assert zh["suggestionDetails"][0]["times"] == [17, 26, 27]
+    # Mock-scored (non-demo) reports get Chinese from the template too.
+    s2, _ = run(app, alex, "other.mp4")
+    zh2 = alex.get(f"/api/reports/{s2['id']}", headers={"Accept-Language": "zh"}).json()
+    assert zh2["reliability"].endswith("置信度") and zh2["aiFeedback"][0].startswith("总分")

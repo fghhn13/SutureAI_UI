@@ -129,9 +129,28 @@ def appeal_out(a: Appeal) -> dict[str, Any]:
     }
 
 
-def report_view(ts: TrainingSession, viewer: User) -> dict[str, Any]:
-    """Report document as ``viewer`` should see it."""
-    content = {k: v for k, v in ts.report.content.items() if k not in _LEGACY_KEYS}
+def _overlay(base: Any, over: Any) -> Any:
+    """Merge a translation overlay: dicts recursively, same-length lists item by item."""
+    if isinstance(base, dict) and isinstance(over, dict):
+        return {**base, **{k: _overlay(base.get(k), v) for k, v in over.items()}}
+    if isinstance(base, list) and isinstance(over, list) and len(base) == len(over):
+        return [_overlay(b, o) for b, o in zip(base, over)]
+    return over
+
+
+def preferred_lang(accept_language: str | None) -> str:
+    """'zh' when the client asks for Chinese first, else 'en'."""
+    first = (accept_language or "").split(",")[0].strip().lower()
+    return "zh" if first.startswith("zh") else "en"
+
+
+def report_view(ts: TrainingSession, viewer: User, lang: str = "en") -> dict[str, Any]:
+    """Report document as ``viewer`` should see it, in ``lang`` where a translation exists."""
+    stored = ts.report.content
+    translation = (stored.get("i18n") or {}).get(lang)
+    if translation:
+        stored = _overlay(stored, translation)
+    content = {k: v for k, v in stored.items() if k not in _LEGACY_KEYS and k != "i18n"}
     is_owner = viewer.id == ts.user_id
     reviewed = is_reviewed(ts)
     # Students only see a review once it is completed; drafts stay with the instructor.
@@ -177,6 +196,7 @@ def report_view(ts: TrainingSession, viewer: User) -> dict[str, Any]:
         "canReview": viewer.is_staff,
         "canRespond": is_owner,
         "maxAppeals": MAX_APPEALS_PER_REPORT,
+        "lang": lang if translation else "en",
     }
     return content
 

@@ -11,6 +11,13 @@ import {
   ReviewResultCard,
   StudentResponseCard,
 } from "../components/report/ReviewPanels.jsx";
+import {
+  FocusCard,
+  PointsLostCard,
+  ProgressCard,
+  TimeChips,
+  TimelineStrip,
+} from "../components/report/FocusPanels.jsx";
 
 function publicAssetUrl(path) {
   const base = import.meta.env.BASE_URL.endsWith("/")
@@ -390,22 +397,16 @@ function AssessmentHighlightsCard({ highlights }) {
   );
 }
 
-function StudentReportFeedbackReflectionSection({ data, onUpdated }) {
+function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
   return (
     <section className="mt-6 surface-card surface-card-lift p-6">
       <h2 className="text-lg font-semibold text-slate-900">Report Feedback & Reflection</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Structured educational workflow connecting AI-generated interpretation, instructor review, and student reflection.
-      </p>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
         <article className="rounded-xl border border-brand-100 bg-brand-50/70 p-5 lg:col-span-2">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
             AI Feedback
           </h3>
-          <p className="mt-1 text-xs text-slate-600">
-            Grounded in institutional rubric, benchmark database, cohort comparison, and evidence-linked performance metrics.
-          </p>
           <div className="mt-3 rounded-md bg-white/80 px-4 py-3">
             <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
               {data.aiFeedback.map((item) => (
@@ -440,9 +441,10 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated }) {
             <article className="rounded-lg border border-brand-200 bg-white/80 p-4">
               <h4 className="text-sm font-semibold text-brand-700">Recommended Next Steps</h4>
               <ul className="mt-2 space-y-2 text-sm leading-6 text-slate-700">
-                {data.suggestions.map((item) => (
-                  <li key={item} className="rounded-md bg-brand-50 px-3 py-2">
-                    {item}
+                {(data.suggestionDetails ?? data.suggestions.map((text) => ({ text, times: [] }))).map((item) => (
+                  <li key={item.text} className="rounded-md bg-brand-50 px-3 py-2">
+                    {item.text}
+                    {item.times?.length ? <TimeChips times={item.times} onSeek={onSeek} className="ml-2" /> : null}
                   </li>
                 ))}
               </ul>
@@ -468,18 +470,12 @@ function InstructorReportFeedbackSection({ data, onUpdated, onSeek }) {
   return (
     <section className="mt-6 surface-card surface-card-lift p-6">
       <h2 className="text-lg font-semibold text-slate-900">Report Feedback & Review</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        The same AI-generated, evidence-linked report viewed through an instructor workflow.
-      </p>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
         <article className="rounded-xl border border-brand-100 bg-brand-50/70 p-5 lg:col-span-2">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
             AI Feedback
           </h3>
-          <p className="mt-1 text-xs text-slate-600">
-            Grounded in institutional rubric, benchmark database, cohort comparison, and evidence-linked performance metrics.
-          </p>
           <div className="mt-3 rounded-md bg-white/80 px-4 py-3">
             <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
               {data.aiFeedback.map((item) => (
@@ -534,6 +530,8 @@ function TrainingReportPage() {
 
   const [expanded, setExpanded] = useState(() => new Set());
   const [timelineSectionOpen, setTimelineSectionOpen] = useState(true);
+  const [showAllEvents, setShowAllEvents] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(null);
   const [viewMode, setViewMode] = useState(isStaff ? "instructor" : "student");
   const evidenceVideoRef = useRef(null);
 
@@ -612,6 +610,13 @@ function TrainingReportPage() {
     setTimelineSectionOpen(true);
     // Only when a different report is opened, not on every update of this one.
   }, [reportKey]);
+
+  const flaggedCount = report?.timeline?.filter((e) => e.type !== "normal").length ?? 0;
+  // Normal steps are hidden by default so the problems stand out (all shown if none flagged).
+  const visibleTimeline =
+    !report?.timeline || showAllEvents || !flaggedCount
+      ? report?.timeline ?? []
+      : report.timeline.filter((e) => e.type !== "normal");
 
   const completionLabel = report?.completed ? "Completed" : "Incomplete";
   const completionStyles = report?.completed
@@ -867,6 +872,8 @@ function TrainingReportPage() {
         </div>
       </header>
 
+      <FocusCard focus={report.focus} onSeek={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined} />
+
       <section className="mt-6 grid gap-4 lg:grid-cols-3">
         <article className="surface-card surface-card-lift p-6 lg:col-span-2">
           <p className="text-sm font-semibold text-slate-500">Overall Performance</p>
@@ -939,6 +946,17 @@ function TrainingReportPage() {
         </article>
       </section>
 
+      {report.pointsLost?.length || report.changes?.length || report.keyMetrics?.length ? (
+        <section className="mt-6 grid gap-4 lg:grid-cols-2">
+          <PointsLostCard
+            items={report.pointsLost}
+            total={100 - report.overallScore}
+            onSeek={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined}
+          />
+          <ProgressCard changes={report.changes} metrics={report.keyMetrics} />
+        </section>
+      ) : null}
+
       <section className="mt-6">
         <h2 className="mb-3 text-lg font-semibold text-slate-900">Dimension Scores</h2>
         <div className="grid gap-4 lg:grid-cols-3">
@@ -959,21 +977,25 @@ function TrainingReportPage() {
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold text-slate-900">Training Timeline</h2>
               <p className="mt-1 text-sm text-slate-600">
-                AI-detected steps, warnings, and evidence-linked events.
+                {showAllEvents || !flaggedCount
+                  ? `All ${report.timeline.length} detected events.`
+                  : `${flaggedCount} warning${flaggedCount === 1 ? "" : "s"} and issue${flaggedCount === 1 ? "" : "s"}; ${report.timeline.length - flaggedCount} normal steps hidden.`}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setTimelineSectionOpen((open) => !open)}
-              aria-expanded={timelineSectionOpen}
-              className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              {timelineSectionOpen ? "Collapse" : "Expand"}
-            </button>
+            {flaggedCount && flaggedCount < report.timeline.length ? (
+              <button
+                type="button"
+                onClick={() => setShowAllEvents((v) => !v)}
+                aria-pressed={showAllEvents}
+                className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                {showAllEvents ? "Show issues only" : `Show all ${report.timeline.length} events`}
+              </button>
+            ) : null}
           </div>
           {timelineSectionOpen ? (
             <div className="mt-4 space-y-4">
-              {report.timeline.map((event) => (
+              {visibleTimeline.map((event) => (
                 <TimelineItem
                   key={event.id}
                   event={event}
@@ -1021,6 +1043,7 @@ function TrainingReportPage() {
                   controls
                   playsInline
                   preload="metadata"
+                  onLoadedMetadata={(e) => setVideoDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : null)}
                   poster={evidenceSrc}
                   src={evidenceVideoUrl}
                 >
@@ -1034,6 +1057,13 @@ function TrainingReportPage() {
                 />
               )}
             </div>
+            {evidenceVideoUrl ? (
+              <TimelineStrip
+                events={report.timeline.map((e) => ({ ...e, timeSeconds: seekSecondsFromTimelineEvent(e) }))}
+                duration={report.durationSeconds ?? videoDuration}
+                onSeek={seekEvidenceVideoToSeconds}
+              />
+            ) : null}
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {report.clips.map((clip) => (
@@ -1061,6 +1091,7 @@ function TrainingReportPage() {
         <StudentReportFeedbackReflectionSection
           data={isStaff ? { ...report, review: report.review?.status === "completed" ? report.review : null } : report}
           onUpdated={setReport}
+          onSeek={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined}
         />
       )}
     </main>
