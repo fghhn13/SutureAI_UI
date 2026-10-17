@@ -23,6 +23,8 @@ def session_out(ts: TrainingSession) -> SessionOut:
         id=ts.id,
         status=ts.status,
         error=ts.error,
+        progress=ts.progress,
+        stage=ts.stage,
         task=TaskOut.model_validate(ts.task),
         video=VideoOut(
             original_filename=video.original_filename,
@@ -134,6 +136,7 @@ def upload_video(
         )
     )
     ts.status = S.UPLOADED.value
+    ts.progress = 0.0
     ts.uploaded_at = utcnow()
     db.commit()
     db.refresh(ts)

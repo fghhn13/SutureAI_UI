@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..deps import get_current_user, get_db, get_owned_session, require_staff
 from ..models import SessionStatus, TrainingSession, User
-from ..schemas import FeedbackIn, FeedbackResponseIn, NoteIn, ReportListItem, ReviewIn
+from ..schemas import AcceptIn, AppealDecisionIn, AppealIn, NoteIn, ReportListItem, ReviewIn
 from ..services import reviews
 from ..services.access import can_view_student
 
@@ -88,41 +88,72 @@ def put_review(
     return reviews.report_view(ts, instructor)
 
 
-@router.post("/{session_id}/feedback")
-def post_feedback(
-    body: FeedbackIn,
+def _decide(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except reviews.ReviewError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+
+
+def _require_owner(ts: TrainingSession, user: User) -> None:
+    if ts.user_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the student can do this on their report.")
+
+
+@router.post("/{session_id}/accept")
+def accept_report(
+    body: AcceptIn,
     ts: TrainingSession = Depends(get_owned_session),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    """Student accepts the report or asks for clarification."""
-    if ts.user_id != user.id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the student can respond to their report.")
-    try:
-        reviews.submit_feedback(
-            db,
-            _ready(ts),
-            user,
-            kind=body.kind,
-            message=body.message,
-            referenced_clip=body.referenced_clip,
-        )
-    except reviews.ReviewError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    """Student accepts the report as it stands."""
+    _require_owner(ts, user)
+    _decide(reviews.accept_report, db, _ready(ts), user, message=body.message)
     return reviews.report_view(ts, user)
 
 
-@router.post("/{session_id}/feedback/response")
-def post_feedback_response(
-    body: FeedbackResponseIn,
+@router.post("/{session_id}/appeals", status_code=status.HTTP_201_CREATED)
+def create_appeal(
+    body: AppealIn,
+    ts: TrainingSession = Depends(get_owned_session),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Student disputes a timeline event (``eventId``) or the whole report."""
+    _require_owner(ts, user)
+    _decide(
+        reviews.create_appeal, db, _ready(ts), user,
+        event_id=body.event_id, reason=body.reason, message=body.message,
+    )
+    return reviews.report_view(ts, user)
+
+
+@router.delete("/{session_id}/appeals/{appeal_id}")
+def withdraw_appeal(
+    appeal_id: int,
+    ts: TrainingSession = Depends(get_owned_session),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    _require_owner(ts, user)
+    _decide(reviews.withdraw_appeal, db, _ready(ts), appeal_id)
+    return reviews.report_view(ts, user)
+
+
+@router.post("/{session_id}/appeals/{appeal_id}/decision")
+def decide_appeal(
+    appeal_id: int,
+    body: AppealDecisionIn,
     ts: TrainingSession = Depends(get_owned_session),
     db: Session = Depends(get_db),
     instructor: User = Depends(require_staff),
 ) -> dict[str, Any]:
-    try:
-        reviews.respond_feedback(db, _ready(ts), instructor, response=body.response)
-    except reviews.ReviewError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    """Instructor accepts (event overturned, score adjusted) or rejects an appeal."""
+    _decide(
+        reviews.decide_appeal, db, _ready(ts), instructor, appeal_id,
+        accept=body.decision == "accept", note=body.note, score_adjustment=body.score_adjustment,
+    )
     return reviews.report_view(ts, instructor)
 
 
@@ -133,7 +164,6 @@ def put_note(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    if ts.user_id != user.id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Notes are private to the student.")
+    _require_owner(ts, user)
     reviews.save_note(db, _ready(ts), body.note)
     return reviews.report_view(ts, user)

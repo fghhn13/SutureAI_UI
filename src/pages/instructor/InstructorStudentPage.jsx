@@ -106,12 +106,12 @@ export default function InstructorStudentPage() {
           deltaLabel="last 3 vs previous 3"
           hint="No reports yet"
         />
-        <StatTile label="Reports" value={stats.totalReports} hint={`${stats.sessions30d} sessions in 30 days`} />
+        <StatTile label="Reports" value={stats.totalReports} hint={`${stats.sessions30d} session${stats.sessions30d === 1 ? "" : "s"} in 30 days`} />
         <StatTile label="Weakest dimension" value={<span className="text-xl">{stats.weakestDimension ?? "—"}</span>} hint="Average of last 5 reports" />
         <StatTile
           label="Waiting on you"
-          value={stats.pendingReviews + stats.openClarifications}
-          hint={`${stats.pendingReviews} to review · ${stats.openClarifications} question(s)`}
+          value={stats.pendingReviews + stats.openAppeals}
+          hint={`${stats.pendingReviews} to review · ${stats.openAppeals} appeal${stats.openAppeals === 1 ? "" : "s"}`}
         />
       </div>
 
@@ -198,7 +198,7 @@ export default function InstructorStudentPage() {
                   <td className="py-3 text-right">
                     {s.score != null ? (
                       <Link to={reportLink(s.sessionId)} className="link-brand text-sm">
-                        {s.reviewState === "completed" && s.feedbackState !== "clarify_open" ? "Open" : "Review"}
+                        {s.reviewState === "completed" && s.feedbackState !== "appeal_open" ? "Open" : "Review"}
                       </Link>
                     ) : null}
                   </td>

@@ -45,7 +45,7 @@ def test_cohort_overview_flags_students(client):
     assert a["kpis"]["students"] == 4
     kinds = {(x["studentName"], x["kind"]) for x in a["attention"]}
     assert ("Priya Shah", "declining") in kinds
-    assert ("Priya Shah", "clarification") in kinds
+    assert ("Priya Shah", "appeal") in kinds
     assert ("Lee Wong", "inactive") in kinds
     assert a["attention"][0]["severity"] == "high"
     roster = {r["name"]: r for r in a["students"]}
@@ -114,30 +114,77 @@ def test_review_flow(client):
     assert dash["history"][0]["instructorStatus"] == "Reviewed"
 
 
-def test_clarification_flow(client):
+def _events(report: dict, *types: str) -> list[dict]:
+    return [e for e in report["timeline"] if not types or e["type"] in types]
+
+
+def test_appeal_flow(client):
     login(client, "sam@demo.local")
     sid = latest_report_id(client)
-    assert client.post(f"/api/reports/{sid}/feedback", json={"kind": "clarify"}).status_code == 409
-    fb = client.post(
-        f"/api/reports/{sid}/feedback",
-        json={"kind": "clarify", "message": "Was 0:42 really a pause?", "referencedClip": "0:42 - Long pause"},
-    ).json()["feedback"]
-    assert fb["status"] == "open"
+    report = client.get(f"/api/reports/{sid}").json()
+    flagged = _events(report, "error", "warning") or _events(report)
+    target, other = flagged[0], _events(report)[-1]
+    url = f"/api/reports/{sid}/appeals"
+
+    assert client.post(url, json={"eventId": target["id"], "reason": "misdetected", "message": " "}).status_code == 409
+    assert client.post(url, json={"eventId": target["id"], "reason": "nope", "message": "x"}).status_code == 409
+    assert client.post(url, json={"eventId": "missing", "reason": "other", "message": "x"}).status_code == 409
+
+    created = client.post(
+        url, json={"eventId": target["id"], "reason": "misdetected", "message": "That never happened."}
+    )
+    assert created.status_code == 201
+    view = created.json()
+    appeal = view["appeals"][0]
+    assert appeal["status"] == "open" and appeal["eventLabel"] == target["title"]
+    assert next(e for e in view["timeline"] if e["id"] == target["id"])["appeal"]["status"] == "open"
+    assert client.post(url, json={"eventId": target["id"], "reason": "other", "message": "again"}).status_code == 409
+    # Can't accept the report while an appeal is open; can't decide your own appeal.
+    assert client.post(f"/api/reports/{sid}/accept", json={}).status_code == 409
+    decision_url = f"{url}/{appeal['id']}/decision"
+    assert client.post(decision_url, json={"decision": "accept", "note": "x"}).status_code == 403
 
     login(client, "chen@demo.local")
-    assert client.post(f"/api/reports/{sid}/feedback", json={"kind": "accept"}).status_code == 403
-    queue = client.get("/api/instructor/reviews?filter=clarifications").json()["items"]
-    assert sid in {i["sessionId"] for i in queue}
-    resolved = client.post(
-        f"/api/reports/{sid}/feedback/response", json={"response": "Yes — 3.1s idle before insertion."}
-    ).json()["feedback"]
-    assert resolved["status"] == "resolved"
-    assert resolved["respondedBy"] == "Dr. Chen"
+    queue = client.get("/api/instructor/reviews?filter=appeals").json()
+    assert sid in {i["sessionId"] for i in queue["items"]}
+    assert client.post(f"/api/reports/{sid}/accept", json={}).status_code == 403
+    assert client.post(decision_url, json={"decision": "accept", "note": " "}).status_code == 409
+    decided = client.post(decision_url, json={"decision": "accept", "note": "Agreed, it was a re-grip."}).json()
+    a = decided["appeals"][0]
+    assert a["status"] == "accepted" and a["scoreAdjustment"] == a["suggestedAdjustment"]
+    assert decided["scores"]["current"] == decided["scores"]["ai"] + a["scoreAdjustment"]
+    assert next(e for e in decided["timeline"] if e["id"] == target["id"])["overturned"] is True
+    assert client.post(decision_url, json={"decision": "reject", "note": "x"}).status_code == 409
+
+    # A completed review absorbs later accepted appeals.
+    ai = decided["scores"]["ai"]
+    client.put(f"/api/reports/{sid}/review", json={"finalScore": ai, "complete": True})
 
     login(client, "sam@demo.local")
-    assert client.get(f"/api/reports/{sid}").json()["feedback"]["response"].startswith("Yes")
-    # Already answered: the student can't overwrite it.
-    assert client.post(f"/api/reports/{sid}/feedback", json={"kind": "accept"}).status_code == 409
+    second = client.post(url, json={"eventId": other["id"], "reason": "timing", "message": "Earlier than that."}).json()
+    second_id = next(x["id"] for x in second["appeals"] if x["eventId"] == other["id"])
+    whole = client.post(url, json={"reason": "other", "message": "Overall too harsh."}).json()
+    whole_id = next(x["id"] for x in whole["appeals"] if x["eventId"] is None)
+    assert client.post(url, json={"reason": "other", "message": "Again"}).status_code == 409
+    withdrawn = client.delete(f"{url}/{whole_id}").json()
+    assert all(x["id"] != whole_id for x in withdrawn["appeals"])
+    assert client.delete(f"{url}/{appeal['id']}").status_code == 409  # already decided
+
+    login(client, "chen@demo.local")
+    after = client.post(
+        f"{url}/{second_id}/decision",
+        json={"decision": "accept", "note": "Fair.", "scoreAdjustment": 3},
+    ).json()
+    assert after["review"]["finalScore"] == ai + 3
+    assert after["scores"]["current"] == ai + 3
+
+    # Instructors can't file appeals on a student's behalf.
+    assert client.post(url, json={"reason": "other", "message": "x"}).status_code == 403
+
+    login(client, "sam@demo.local")
+    assert client.post(f"/api/reports/{sid}/accept", json={"message": "Thanks"}).json()["feedback"]["kind"] == "accept"
+    dash = client.get("/api/dashboard").json()
+    assert any("appeal" in n for n in dash["notifications"])
 
 
 def test_personal_note_is_private(client):

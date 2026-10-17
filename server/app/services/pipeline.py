@@ -17,11 +17,21 @@ from sqlalchemy.orm import Session
 from ..config import Settings
 from ..db import Database
 from ..models import Report, ScoringResult, SessionStatus, TrainingSession, utcnow
-from ..providers.base import ReportContext, ReportProvider, ScoringContext, ScoringProvider
+from ..providers.base import (
+    ReportContext,
+    ReportProvider,
+    ScoringContext,
+    ScoringProvider,
+    UserFacingError,
+)
 
 log = logging.getLogger(__name__)
 
 S = SessionStatus
+
+# Share of the overall progress bar each step covers.
+SCORING_SPAN = (0.02, 0.80)
+REPORT_SPAN = (0.80, 1.00)
 
 # stage input status -> (in-progress status, next status)
 _STAGES = {
@@ -67,10 +77,14 @@ class Pipeline:
             raise ValueError("Only failed sessions can be retried.")
         if ts.scoring is not None:
             ts.status = S.SCORED.value
+            ts.progress = REPORT_SPAN[0]
         elif ts.video is not None:
             ts.status = S.UPLOADED.value
+            ts.progress = 0.0
         else:
             ts.status = S.CREATED.value
+            ts.progress = None
+        ts.stage = None
         ts.error = None
         db.commit()
 
@@ -87,6 +101,9 @@ class Pipeline:
                 self._run_scoring(session_id)
             else:
                 self._run_report(session_id)
+        except UserFacingError as exc:
+            log.info("Pipeline stage %s rejected session %s: %s", stage.value, session_id, exc)
+            self._fail(session_id, str(exc))
         except Exception as exc:  # provider errors must not kill the worker
             log.exception("Pipeline stage %s failed for session %s", stage.value, session_id)
             self._fail(session_id, f"{type(exc).__name__}: {exc}")
@@ -135,6 +152,9 @@ class Pipeline:
                 task_name=ts.task.name,
                 video_path=(self.settings.video_dir / video.path) if video else None,
                 duration_s=video.duration_s if video else None,
+                video_sha256=video.sha256 if video else None,
+                original_filename=video.original_filename if video else None,
+                progress=self._progress_writer(session_id, *SCORING_SPAN),
             )
         raw = self.scoring.score(ctx)  # may be slow; no DB session held
         with self.database.session() as db:
@@ -151,6 +171,7 @@ class Pipeline:
                 )
             )
             ts.status = S.SCORED.value
+            ts.progress = SCORING_SPAN[1]
             db.commit()
 
     def _run_report(self, session_id: str) -> None:
@@ -164,9 +185,29 @@ class Pipeline:
                 scoring=ts.scoring.raw,
                 previous_score=previous_score(db, ts),
                 evidence_video_url=video_url(ts.id) if ts.video else None,
+                progress=self._progress_writer(session_id, *REPORT_SPAN),
             )
         content = self.reporter.generate(ctx)
         save_report(self.database, session_id, self.reporter.name, content)
+
+    def _progress_writer(self, session_id: str, lo: float, hi: float):
+        """Callback for providers: maps their 0..1 onto [lo, hi] of the session's bar."""
+        last = {"value": -1.0, "stage": None}
+
+        def write(fraction: float, stage: str) -> None:
+            value = lo + (hi - lo) * min(1.0, max(0.0, fraction))
+            if stage == last["stage"] and value - last["value"] < 0.005:
+                return  # skip no-op writes
+            last.update(value=value, stage=stage)
+            with self.database.session() as db:
+                db.execute(
+                    update(TrainingSession)
+                    .where(TrainingSession.id == session_id)
+                    .values(progress=round(value, 4), stage=stage)
+                )
+                db.commit()
+
+        return write
 
     def _fail(self, session_id: str, message: str) -> None:
         with self.database.session() as db:
@@ -206,6 +247,8 @@ def save_report(database: Database, session_id: str, generator: str, content: di
             )
         )
         ts.status = S.READY.value
+        ts.progress = 1.0
+        ts.stage = None
         ts.finished_at = utcnow()
         db.commit()
 

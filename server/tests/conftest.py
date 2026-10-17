@@ -15,6 +15,7 @@ def settings(tmp_path) -> Settings:
         worker_enabled=False,  # tests drive the pipeline explicitly
         mock_scoring_delay_s=0,
         mock_report_delay_s=0,
+        demo_analysis_s=0,
     )
 
 

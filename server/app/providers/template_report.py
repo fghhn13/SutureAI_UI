@@ -10,8 +10,19 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from .base import ReportContext
+from .base import REPORT_STAGES, ReportContext, run_stages
 from .dimensions import DIMENSIONS_BY_KEY, band_text
+
+NARRATIVE_KEYS = {
+    "summary",
+    "strengths",
+    "weaknesses",
+    "suggestions",
+    "aiFeedback",
+    "uncertainty",
+    "assessmentHighlights",
+    "duration",
+}
 
 _SEVERITY_TO_CLIP_TYPE = {"error": "Error", "warning": "Warning", "normal": "Step"}
 
@@ -41,8 +52,7 @@ class TemplateReportProvider:
         self.delay_s = delay_s
 
     def generate(self, ctx: ReportContext) -> dict[str, Any]:
-        if self.delay_s > 0:
-            time.sleep(self.delay_s)
+        run_stages(ctx.progress, REPORT_STAGES, self.delay_s, time.sleep)
 
         raw = ctx.scoring
         overall = int(raw["overallScore"])
@@ -102,7 +112,8 @@ class TemplateReportProvider:
             diff = overall - ctx.previous_score
             delta = f"{diff:+d}"
             delta_sentence = (
-                f"That is {abs(diff)} points {'above' if diff >= 0 else 'below'} your previous session."
+                f"That is {abs(diff)} point{'s' if abs(diff) != 1 else ''} "
+                f"{'above' if diff >= 0 else 'below'} your previous session."
                 if diff
                 else "That matches your previous session."
             )
@@ -122,7 +133,7 @@ class TemplateReportProvider:
         elif not uncertainty:
             uncertainty.append("No major uncertainty sources detected in this recording.")
 
-        return {
+        report = {
             "evidencePreviewUrl": None,
             "evidenceVideoUrl": ctx.evidence_video_url,
             "productName": "SutureAI",
@@ -168,3 +179,15 @@ class TemplateReportProvider:
             # Review, feedback and notes live in their own tables and are merged in
             # per viewer by services.reviews.report_view().
         }
+        # Hand-written text (annotated demo recordings) replaces the generated wording.
+        narrative = raw.get("narrative") or {}
+        explanations = narrative.get("dimensionExplanations") or {}
+        for d in report["dimensions"]:
+            d["explanation"] = explanations.get(d["name"], d["explanation"])
+        for key, value in narrative.items():
+            if key in NARRATIVE_KEYS:
+                if key == "assessmentHighlights":
+                    report[key] = {**report[key], **value}
+                else:
+                    report[key] = value
+        return report

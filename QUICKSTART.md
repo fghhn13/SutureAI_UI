@@ -74,7 +74,7 @@ npm run dev
 
 1. 用 `chen@demo.local` 登录，进入**班级总览**：看「需要关注」列表、技能热力图和学生名单
 2. 点 Priya Shah 进入学生详情，看分数下滑的趋势和各维度小图
-3. 在训练记录里点 **Review** 打开她的报告：回复她的澄清请求，调整分数、写评语，点 **Complete review**
+3. 在训练记录里点 **Review** 打开她的报告：裁决她的申诉（Accept / Reject），调整分数、写评语，点 **Complete review**
 4. 右下角 Dev 切换到 Priya，打开同一份报告，能看到教师评审和回复
 
 ## 常用命令
@@ -82,7 +82,8 @@ npm run dev
 | 命令 | 说明 |
 |------|------|
 | `.\server\.venv\Scripts\python -m pytest server` | 后端测试 |
-| `.\.venv\Scripts\python -m app.seed --reset`（在 `server/` 目录下执行） | 清空数据库和上传的视频，重新写入演示数据 |
+| `npm run demo:reset` | 清空数据库和上传的视频，重新写入演示数据 |
+| `npm run demo:register -- <视频>` | 把一个视频文件登记为演示视频（见 [docs/demo-script.md](docs/demo-script.md)） |
 | `npm run build` | 前端生产构建，输出到 `dist/` |
 
 API 文档：后端运行时访问 http://127.0.0.1:8000/docs 。

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "overallScore": 66,
+  "confidence": 0.68,
+  "completed": false,
+  "durationSeconds": 116,
+  "dimensions": [
+    { "key": "efficiency", "score": 62, "metrics": { "idleRatio": 0.21, "repeatedAttempts": 2 } },
+    { "key": "accuracy", "score": 64, "metrics": { "threadingAttempts": 2, "insertionAttempts": 1 } },
+    { "key": "procedural_flow", "score": 68, "metrics": { "stepsCompleted": 9, "stepsTotal": 11, "reworkCount": 2 } },
+    { "key": "safety", "score": 72, "metrics": { "wrongToolEvents": 1, "needleDrops": 0 } },
+    { "key": "product_quality", "score": 64, "metrics": { "knotThrows": 3, "segmentsCompleted": 1 } }
+  ],
+  "events": [
+    { "t": 2, "severity": "normal", "code": "task_start", "label": "Task start detected", "detail": "Segment 1 begins; both hands enter the working area.", "clip": false },
+    { "t": 3, "severity": "error", "code": "wrong_tool", "label": "Wrong tool in left hand", "detail": "Observed tool: scissors. Expected tool: forceps.", "clip": true },
+    { "t": 5, "severity": "normal", "code": "tool_corrected", "label": "Switched to correct tool", "detail": "Forceps picked up; task continues.", "clip": false },
+    { "t": 17, "severity": "normal", "code": "threading_attempt", "label": "First threading attempt", "detail": "Needle tip approaches the eye of the thread.", "clip": false },
+    { "t": 26, "severity": "warning", "code": "threading_failed", "label": "Threading failed", "detail": "First pass did not go through; hand tremor visible before the retry.", "clip": true },
+    { "t": 27, "severity": "normal", "code": "threading_attempt", "label": "Second threading attempt", "detail": "Retry starts immediately after the failed pass.", "clip": false },
+    { "t": 35, "severity": "normal", "code": "threading_success", "label": "Threading succeeded", "detail": "Thread passes through on the second attempt.", "clip": true },
+    { "t": 45, "severity": "normal", "code": "knot_start", "label": "Knotting started", "detail": "Instrument tie begins.", "clip": false },
+    { "t": 53, "severity": "normal", "code": "knot_throw_1", "label": "First knot throw completed", "detail": "Throw laid flat.", "clip": false },
+    { "t": 58, "severity": "normal", "code": "knot_throw_2", "label": "Second knot throw completed", "detail": "Throw laid flat; direction alternated.", "clip": false },
+    { "t": 62, "severity": "normal", "code": "knot_throw_3", "label": "Third knot throw completed", "detail": "Square knot sequence finished.", "clip": false },
+    { "t": 73, "severity": "normal", "code": "segment_complete", "label": "Segment 1 complete", "detail": "End of the first practice segment.", "clip": true },
+    { "t": 83, "severity": "normal", "code": "task_start", "label": "Task start detected (segment 2)", "detail": "Second segment begins.", "clip": false },
+    { "t": 96, "severity": "normal", "code": "threading_attempt", "label": "First threading attempt (segment 2)", "detail": "Needle approaches the thread.", "clip": false },
+    { "t": 114, "severity": "error", "code": "recording_interrupted", "label": "Recording interrupted", "detail": "Video stops before threading in segment 2 was completed.", "clip": true }
+  ],
+  "notes": [
+    "After the segment-2 interruption there is no further footage; scoring relies mainly on segment 1 and the part of segment 2 before the cut."
+  ],
+  "narrative": {
+    "duration": "1m 56s (2 segments, second interrupted)",
+    "summary": "Needle handling is still developing: noticeable tremor and uneven motion during threading. A brief wrong-tool pick was corrected quickly. The second segment ends with a recording interruption before threading was completed.",
+    "strengths": [
+      "Quick recovery after picking up the wrong instrument (corrected within 2 seconds).",
+      "Clean three-throw knot sequence in segment 1."
+    ],
+    "weaknesses": [
+      "Threading needed two attempts; hand stability is still limited.",
+      "Segment 2 was interrupted, so the full sequence cannot be reviewed."
+    ],
+    "suggestions": [
+      "Drill needle-thread alignment with fixed hand rests to reduce tremor.",
+      "Lay out instruments in a fixed order and check the left hand before starting.",
+      "Record segment 2 again from start to finish."
+    ],
+    "aiFeedback": [
+      "Overall score 66/100: motion smoothness and threading success rate are below this stage's target.",
+      "The tool mix-up at 0:03 was brief and corrected promptly; it still counts against procedural flow.",
+      "The interruption at 1:54 limits the evidence for the second half of the task."
+    ],
+    "assessmentHighlights": {
+      "strongestDimension": "Safety",
+      "mainIssue": "Threading proficiency and recording continuity",
+      "practiceFocus": "Stable threading and uninterrupted recording"
+    },
+    "dimensionExplanations": {
+      "Efficiency": "Pauses and the repeated threading attempt slow the pace versus cohort norms.",
+      "Accuracy": "Threading succeeded on the second attempt; micro-adjustments were unstable.",
+      "Procedural Flow": "Knot sequence completed, but the initial tool selection was wrong.",
+      "Safety": "No high-risk behaviour; the tool mix-up was corrected quickly.",
+      "Product Quality": "Knot quality acceptable; segment 2 could not be assessed."
+    }
+  }
+}

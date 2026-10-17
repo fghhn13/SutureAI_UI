@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..models import Cohort, SessionStatus, TrainingSession, User, utcnow
 from ..providers.dimensions import DIMENSIONS
 from .dashboard import build_calendar, load_sessions
-from .reviews import has_open_clarification, is_reviewed
+from .reviews import current_score, is_reviewed, open_appeals
 
 S = SessionStatus
 _IN_PROGRESS = {S.UPLOADED.value, S.SCORING.value, S.SCORED.value, S.GENERATING.value}
@@ -78,7 +78,7 @@ def student_stats(student: User, sessions: list[TrainingSession], now: datetime)
         "dimensionAverages": dims,
         "weakestDimension": min(known, key=known.get) if known else None,
         "pendingReviews": sum(1 for s in ready if not is_reviewed(s)),
-        "openClarifications": sum(1 for s in ready if has_open_clarification(s)),
+        "openAppeals": sum(len(open_appeals(s)) for s in ready),
         "failedSessions": sum(1 for s in sessions if s.status == S.FAILED.value),
         "inProgress": sum(1 for s in sessions if s.status in _IN_PROGRESS),
     }
@@ -103,8 +103,9 @@ def attention_items(
         )
 
     for s in _ready(sessions):
-        if has_open_clarification(s):
-            add("clarification", "high", f"Asked for clarification on {s.task.name}", s.id)
+        n = len(open_appeals(s))
+        if n:
+            add("appeal", "high", f"Appealed {n} finding(s) in {s.task.name}", s.id)
 
     change = stats["recentChange"]
     if change is not None and stats["totalReports"] >= 3 and change <= DECLINE_THRESHOLD:
@@ -160,7 +161,7 @@ def cohort_overview(db: Session, cohort: Cohort) -> dict[str, Any]:
             "avgScore30d": _avg([s.report.overall_score for s in ready if in_window(s, 30, 0)]),
             "avgScorePrev30d": _avg([s.report.overall_score for s in ready if in_window(s, 60, 30)]),
             "pendingReviews": sum(r["pendingReviews"] for r in roster),
-            "openClarifications": sum(r["openClarifications"] for r in roster),
+            "openAppeals": sum(r["openAppeals"] for r in roster),
         },
         "attention": attention,
         "dimensions": DIMENSION_NAMES,
@@ -181,6 +182,14 @@ def cohort_out(cohort: Cohort) -> dict[str, Any]:
     }
 
 
+def _final_score(s: TrainingSession) -> int | None:
+    """Score after review/appeals, or None when it still equals the AI score unconfirmed."""
+    if s.report is None:
+        return None
+    cs = current_score(s)
+    return cs if is_reviewed(s) or cs != s.report.overall_score else None
+
+
 def _review_state(s: TrainingSession) -> str:
     if s.review is None:
         return "none"
@@ -188,12 +197,14 @@ def _review_state(s: TrainingSession) -> str:
 
 
 def _feedback_state(s: TrainingSession) -> str | None:
-    fb = s.feedback
-    if fb is None:
-        return None
-    if fb.kind == "accept":
+    """Student's stance on the report: open appeal > decided appeals > accepted > none."""
+    if open_appeals(s):
+        return "appeal_open"
+    if s.appeals:
+        return "appeal_decided"
+    if s.feedback is not None:
         return "accepted"
-    return "clarify_open" if fb.status == "open" else "clarify_resolved"
+    return None
 
 
 def student_detail(db: Session, student: User) -> dict[str, Any]:
@@ -219,7 +230,7 @@ def student_detail(db: Session, student: User) -> dict[str, Any]:
                 "recordedAt": _iso(_when(s)),
                 "taskName": s.task.name,
                 "score": s.report.overall_score,
-                "finalScore": s.review.final_score if is_reviewed(s) else None,
+                "finalScore": _final_score(s),
                 "dimensions": {d["name"]: d["score"] for d in s.report.content.get("dimensions", [])},
             }
             for s in ready
@@ -231,7 +242,7 @@ def student_detail(db: Session, student: User) -> dict[str, Any]:
                 "taskName": s.task.name,
                 "status": s.status,
                 "score": s.report.overall_score if s.report else None,
-                "finalScore": s.review.final_score if is_reviewed(s) else None,
+                "finalScore": _final_score(s),
                 "reviewState": _review_state(s),
                 "feedbackState": _feedback_state(s),
                 "error": s.error,
@@ -243,7 +254,7 @@ def student_detail(db: Session, student: User) -> dict[str, Any]:
     }
 
 
-QUEUE_FILTERS = ("pending", "clarifications", "completed")
+QUEUE_FILTERS = ("pending", "appeals", "completed")
 
 
 def review_queue(db: Session, cohorts: list[Cohort], queue_filter: str) -> dict[str, Any]:
@@ -253,7 +264,7 @@ def review_queue(db: Session, cohorts: list[Cohort], queue_filter: str) -> dict[
 
     buckets: dict[str, list[TrainingSession]] = {
         "pending": [s for s in ready if not is_reviewed(s)],
-        "clarifications": [s for s in ready if has_open_clarification(s)],
+        "appeals": [s for s in ready if open_appeals(s)],
         "completed": [s for s in ready if is_reviewed(s)],
     }
     chosen = buckets[queue_filter]

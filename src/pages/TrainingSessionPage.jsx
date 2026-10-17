@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, uploadWithProgress } from "../api/client.js";
-import {
-  PROCESSING_STEPS,
-  STATUS_LABELS,
-  STATUS_STEP_INDEX,
-  TERMINAL_STATUSES,
-} from "../api/sessionStatus.js";
+import { STATUS_LABELS, TERMINAL_STATUSES } from "../api/sessionStatus.js";
+import ProcessingPanel from "../components/ProcessingPanel.jsx";
 
-const POLL_MS = 2000;
+const POLL_MS = 1000;
+const AUTO_OPEN_MS = 2500;
 const ACCEPTED_EXTENSIONS = [".mp4", ".webm", ".mov", ".mkv"];
 
 function formatBytes(n) {
@@ -149,49 +146,6 @@ function VideoDropZone({ file, previewUrl, duration, onFile, disabled }) {
   );
 }
 
-function ProcessingSteps({ status }) {
-  const current = STATUS_STEP_INDEX[status] ?? 0;
-  return (
-    <ol className="grid gap-3 sm:grid-cols-3">
-      {PROCESSING_STEPS.map((label, i) => {
-        const done = i < current;
-        const active = i === current && status !== "failed";
-        const failedHere = i === current && status === "failed";
-        return (
-          <li
-            key={label}
-            className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
-              done
-                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                : active
-                  ? "border-brand-200 bg-brand-50 text-brand-700"
-                  : failedHere
-                    ? "border-rose-200 bg-rose-50 text-rose-900"
-                    : "border-slate-200 bg-white text-slate-500"
-            }`}
-          >
-            <span
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                done
-                  ? "bg-emerald-600 text-white"
-                  : active
-                    ? "border-2 border-brand-500 border-t-transparent motion-safe:animate-spin"
-                    : failedHere
-                      ? "bg-rose-600 text-white"
-                      : "border border-slate-300"
-              }`}
-              aria-hidden
-            >
-              {done ? "✓" : failedHere ? "!" : ""}
-            </span>
-            <span className="font-medium">{label}</span>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
 export default function TrainingSessionPage() {
   const { sessionId } = useParams();
   const [searchParams] = useSearchParams();
@@ -252,6 +206,24 @@ export default function TrainingSessionPage() {
     }, POLL_MS);
     return () => clearInterval(timer);
   }, [session, status]);
+
+  // Open the report automatically when processing finishes while the student watches.
+  const sawProcessingRef = useRef(false);
+  const [autoOpening, setAutoOpening] = useState(false);
+  useEffect(() => {
+    if (!session) return undefined;
+    if (!TERMINAL_STATUSES.has(session.status) && session.status !== "created") {
+      sawProcessingRef.current = true;
+      return undefined;
+    }
+    if (session.status !== "ready" || !sawProcessingRef.current) return undefined;
+    setAutoOpening(true);
+    const id = setTimeout(
+      () => navigate({ pathname: "/report", search: `?session=${encodeURIComponent(session.id)}` }),
+      AUTO_OPEN_MS,
+    );
+    return () => clearTimeout(id);
+  }, [session, navigate]);
 
   useEffect(() => () => previewUrl && URL.revokeObjectURL(previewUrl), [previewUrl]);
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -434,7 +406,7 @@ export default function TrainingSessionPage() {
         </>
       ) : (
         <section className="surface-card mt-6 p-6">
-          <ProcessingSteps status={session.status} />
+          <ProcessingPanel session={session} />
 
           {session.status === "ready" ? (
             <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -442,6 +414,7 @@ export default function TrainingSessionPage() {
                 Overall score{" "}
                 <span className="text-2xl font-bold text-brand-700">{session.overallScore}</span>
                 <span className="text-slate-500"> / 100</span>
+                {autoOpening ? <span className="ml-3 text-slate-500">Opening your report…</span> : null}
               </p>
               <Link
                 to={{ pathname: "/report", search: `?session=${encodeURIComponent(session.id)}` }}
@@ -463,8 +436,7 @@ export default function TrainingSessionPage() {
             </div>
           ) : (
             <p className="mt-6 text-sm text-slate-600">
-              This usually takes under a minute. You can leave this page — the report will show up on
-              your dashboard when it is ready.
+              You can leave this page — the report will show up on your dashboard when it is ready.
             </p>
           )}
 
