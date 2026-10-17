@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, apiUrl } from "../api/client.js";
+import { formatDateTime, reliabilityLabel, reportStatusLabel, useI18n } from "../i18n/index.js";
 
 /**
  * Print layout of a report, used for "Export PDF" (browser print → Save as PDF).
@@ -10,13 +11,7 @@ import { api, apiUrl } from "../api/client.js";
 
 const THUMB_W = 240;
 const THUMB_H = 135;
-const TYPE_LABEL = { normal: "Step", warning: "Warning", error: "Issue" };
-const REASON_LABEL = {
-  misdetected: "Didn't happen",
-  occluded: "View blocked",
-  timing: "Intentional / wrong moment",
-  other: "Other",
-};
+// Event type labels: report.eventType.<type>; appeal reasons: report.printView.reasons.<reason>.
 
 function seconds(event) {
   if (typeof event.timeSeconds === "number") return event.timeSeconds;
@@ -30,10 +25,8 @@ function clock(s) {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 }
 
-function fmtDate(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+function fmtDate(iso, locale) {
+  return formatDateTime(iso, undefined, locale, "");
 }
 
 /** Grab a JPEG still at each requested time (seconds) from a same-origin video URL. */
@@ -94,6 +87,7 @@ function Section({ title, children, keepTogether = true }) {
 }
 
 export default function ReportPrintPage() {
+  const { t, locale } = useI18n();
   const [params] = useSearchParams();
   const sessionId = params.get("session");
   const autoPrint = params.get("autoprint") === "1";
@@ -104,7 +98,7 @@ export default function ReportPrintPage() {
 
   useEffect(() => {
     if (!sessionId) {
-      setError("No report selected.");
+      setError(t("report.printView.noSession"));
       return;
     }
     api(`/reports/${encodeURIComponent(sessionId)}`)
@@ -134,11 +128,11 @@ export default function ReportPrintPage() {
   }, [ready, autoPrint]);
 
   useEffect(() => {
-    if (report) document.title = `SutureAI report — ${report.student} — ${report.task}`;
-  }, [report]);
+    if (report) document.title = t("report.printView.docTitle", { student: report.student, task: report.task });
+  }, [report, t]);
 
   if (error) return <p className="p-10 text-rose-700">{error}</p>;
-  if (!report) return <p className="p-10 text-slate-500">Loading report…</p>;
+  if (!report) return <p className="p-10 text-slate-500">{t("report.loading")}</p>;
 
   const scores = report.scores ?? { ai: report.overallScore, current: report.overallScore };
   const review = report.review?.status === "completed" ? report.review : null;
@@ -150,58 +144,72 @@ export default function ReportPrintPage() {
 
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-6 py-3 print:hidden">
         <button type="button" disabled={!ready} onClick={() => window.print()} className="btn-primary px-4 py-2">
-          {ready ? "Save as PDF" : "Preparing video stills…"}
+          {ready ? t("report.printView.savePdf") : t("report.printView.preparing")}
         </button>
         <span className="text-sm text-slate-600">
-          In the print dialog choose <strong>Save as PDF</strong> as the destination.
+          {t("report.printView.hint.before")}
+          <strong>{t("report.printView.hint.strong")}</strong>
+          {t("report.printView.hint.after")}
         </span>
       </div>
 
       <article className="mx-auto my-6 max-w-[210mm] bg-white p-10 text-[13px] leading-relaxed text-slate-800 shadow print:my-0 print:max-w-none print:p-0 print:shadow-none">
         <header className="flex items-start justify-between gap-6 border-b-2 border-brand-600 pb-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">SutureAI · Training Report</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">{t("report.printView.brand")}</p>
             <h1 className="mt-1 text-2xl font-bold text-slate-900">{report.task}</h1>
             <p className="mt-1 text-slate-600">
-              {report.student} · {fmtDate(report.recordedAt) || report.dateTime} · {report.duration}
+              {report.student} · {fmtDate(report.recordedAt, locale) || report.dateTime} · {report.duration}
             </p>
           </div>
           <div className="text-right">
             <p className="text-4xl font-bold text-slate-900">{scores.current}</p>
             <p className="text-xs text-slate-500">
-              {scores.current !== scores.ai || review ? `AI score ${scores.ai}` : "AI score"}
-              {review ? " · confirmed by instructor" : ""}
+              {scores.current !== scores.ai || review
+                ? t("report.printView.aiScoreValue", { score: scores.ai })
+                : t("report.printView.aiScore")}
+              {review ? t("report.printView.confirmed") : ""}
             </p>
-            <p className="mt-1 text-xs font-semibold text-slate-600">{report.status}</p>
+            <p className="mt-1 text-xs font-semibold text-slate-600">{reportStatusLabel(t, report.status)}</p>
           </div>
         </header>
 
-        <Section title="Summary">
+        <Section title={t("report.printView.summary")}>
           <p>{report.summary}</p>
           <p className="mt-1 text-xs text-slate-500">
-            Confidence: {report.reliability} · Change vs last session: {report.delta} ·{" "}
-            {report.completed ? "Task completed" : "Task incomplete"}
+            {t("report.printView.summaryLine", {
+              reliability: reliabilityLabel(t, report.reliability),
+              delta: report.delta,
+              completion: report.completed ? t("report.printView.taskCompleted") : t("report.printView.taskIncomplete"),
+            })}
           </p>
         </Section>
 
         {report.focus?.title ? (
-          <Section title="Fix this first">
+          <Section title={t("report.focus.fixFirst")}>
             <div className="rounded border-l-4 border-rose-500 bg-rose-50/50 px-3 py-2">
               <p className="font-semibold">
                 {report.focus.title}
-                {report.focus.impact ? <span className="font-normal text-slate-600"> · about −{report.focus.impact} pts</span> : null}
+                {report.focus.impact ? <span className="font-normal text-slate-600">
+                    {" · "}
+                    {t("report.focus.impact", { points: report.focus.impact })}
+                  </span> : null}
                 {report.focus.times?.length ? (
-                  <span className="font-normal text-slate-600"> · at {report.focus.times.map(clock).join(", ")}</span>
+                  <span className="font-normal text-slate-600">
+                    {t("report.printView.focusAt", { times: report.focus.times.map(clock).join(", ") })}
+                  </span>
                 ) : null}
               </p>
               <p className="text-slate-700">{report.focus.why}</p>
-              {report.focus.drill ? <p className="mt-1"><strong>Practice:</strong> {report.focus.drill}</p> : null}
+              {report.focus.drill ? <p className="mt-1">
+                  <strong>{t("report.printView.practice")}</strong> {report.focus.drill}
+                </p> : null}
             </div>
           </Section>
         ) : null}
 
         {report.pointsLost?.length ? (
-          <Section title={`Where the ${100 - report.overallScore} points went`}>
+          <Section title={t("report.points.title", { total: 100 - report.overallScore })}>
             <table className="w-full border-collapse">
               <tbody>
                 {report.pointsLost.map((p, i) => (
@@ -223,13 +231,22 @@ export default function ReportPrintPage() {
             </table>
             {report.keyMetrics?.length ? (
               <p className="mt-2 text-xs text-slate-600">
-                {report.keyMetrics.map((m) => `${m.ok ? "✓" : "✕"} ${m.label} ${m.display} (target ${m.target})`).join("   ")}
+                {report.keyMetrics
+                  .map((m) =>
+                    t("report.printView.metricLine", {
+                      mark: m.ok ? "✓" : "✕",
+                      label: m.label,
+                      value: m.display,
+                      target: m.target,
+                    }),
+                  )
+                  .join("   ")}
               </p>
             ) : null}
           </Section>
         ) : null}
 
-        <Section title="Dimension scores">
+        <Section title={t("report.printView.dimensions")}>
           <table className="w-full border-collapse">
             <tbody>
               {report.dimensions.map((d) => (
@@ -248,28 +265,28 @@ export default function ReportPrintPage() {
           </table>
         </Section>
 
-        <Section title="Timeline" keepTogether={false}>
+        <Section title={t("report.printView.timeline")} keepTogether={false}>
           <table className="w-full border-collapse">
             <tbody>
               {report.timeline.map((e) => {
-                const t = seconds(e);
-                const still = t != null ? frames?.[t] : null;
+                const at = seconds(e);
+                const still = at != null ? frames?.[at] : null;
                 return (
                   <tr key={e.id} className="break-inside-avoid border-b border-slate-100 align-top">
                     {Object.keys(frames ?? {}).length ? (
                       <td className="w-[124px] py-2 pr-3">
                         {still ? (
-                          <img src={still} alt={`Video at ${e.time}`} className="w-[120px] rounded border border-slate-200" />
+                          <img src={still} alt={t("report.printView.stillAlt", { time: e.time })} className="w-[120px] rounded border border-slate-200" />
                         ) : null}
                       </td>
                     ) : null}
-                    <td className="w-14 py-2 font-mono font-semibold text-brand-700">{t != null ? clock(t) : e.time}</td>
+                    <td className="w-14 py-2 font-mono font-semibold text-brand-700">{at != null ? clock(at) : e.time}</td>
                     <td className="py-2">
                       <p className={`font-semibold ${e.overturned ? "text-slate-400 line-through" : ""}`}>{e.title}</p>
                       {e.detail ? <p className="text-slate-600">{e.detail}</p> : null}
-                      {e.overturned ? <p className="text-xs font-semibold text-emerald-700">Overturned after appeal</p> : null}
+                      {e.overturned ? <p className="text-xs font-semibold text-emerald-700">{t("report.printView.overturned")}</p> : null}
                     </td>
-                    <td className="w-20 py-2 text-right text-xs font-semibold text-slate-500">{TYPE_LABEL[e.type] ?? e.type}</td>
+                    <td className="w-20 py-2 text-right text-xs font-semibold text-slate-500">{t(`report.eventType.${e.type}`, { defaultValue: e.type })}</td>
                   </tr>
                 );
               })}
@@ -278,14 +295,14 @@ export default function ReportPrintPage() {
         </Section>
 
         <div className="grid grid-cols-2 gap-6">
-          <Section title="Strengths">
+          <Section title={t("report.printView.strengths")}>
             <ul className="list-disc pl-5">
               {report.strengths.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ul>
           </Section>
-          <Section title="Areas to improve">
+          <Section title={t("report.printView.improvements")}>
             <ul className="list-disc pl-5">
               {report.weaknesses.map((s) => (
                 <li key={s}>{s}</li>
@@ -294,7 +311,7 @@ export default function ReportPrintPage() {
           </Section>
         </div>
 
-        <Section title="Recommended next steps">
+        <Section title={t("report.printView.nextSteps")}>
           <ol className="list-decimal pl-5">
             {(report.suggestionDetails ?? report.suggestions.map((text) => ({ text, times: [] }))).map((item) => (
               <li key={item.text}>
@@ -308,20 +325,28 @@ export default function ReportPrintPage() {
         </Section>
 
         {appeals.length ? (
-          <Section title="Appeals">
+          <Section title={t("report.printView.appeals")}>
             {appeals.map((a) => (
               <div key={a.id} className="mb-3 break-inside-avoid rounded border border-slate-200 p-3">
                 <p className="font-semibold">
                   {a.eventTime != null ? `${clock(a.eventTime)} · ` : ""}
-                  {a.eventLabel ?? "Whole report"} —{" "}
-                  {a.status === "open"
-                    ? "pending"
-                    : a.status === "accepted"
-                      ? `accepted (${a.scoreAdjustment > 0 ? "+" : ""}${a.scoreAdjustment})`
-                      : "rejected"}
+                  {t("report.printView.appealLine", {
+                    label: a.eventLabel ?? t("report.appeals.wholeReport"),
+                    status:
+                      a.status === "open"
+                        ? t("report.printView.appealStatus.pending")
+                        : a.status === "accepted"
+                          ? t("report.printView.appealStatus.accepted", {
+                              value: `${a.scoreAdjustment > 0 ? "+" : ""}${a.scoreAdjustment}`,
+                            })
+                          : t("report.printView.appealStatus.rejected"),
+                  })}
                 </p>
                 <p className="text-slate-600">
-                  Student ({REASON_LABEL[a.reason] ?? a.reason}): “{a.message}”
+                  {t("report.printView.studentReason", {
+                    reason: t(`report.printView.reasons.${a.reason}`, { defaultValue: a.reason }),
+                    message: a.message,
+                  })}
                 </p>
                 {a.decisionNote ? (
                   <p className="text-slate-600">
@@ -334,20 +359,25 @@ export default function ReportPrintPage() {
         ) : null}
 
         {review ? (
-          <Section title="Instructor review">
+          <Section title={t("report.printView.instructorReview")}>
             <p>
-              <strong>{review.instructorName}</strong> · {fmtDate(review.completedAt)} · final score{" "}
-              <strong>{review.finalScore}</strong> (AI {review.aiScore})
+              <strong>{review.instructorName}</strong> · {fmtDate(review.completedAt, locale)} ·{" "}
+              {t("report.printView.finalScore")} <strong>{review.finalScore}</strong>
+              {t("report.printView.aiParen", { score: review.aiScore })}
             </p>
             {review.comment ? <p className="mt-1">{review.comment}</p> : null}
             {review.teachingFocus?.length ? (
-              <p className="mt-1 text-slate-600">Teaching focus: {review.teachingFocus.join(", ")}</p>
+              <p className="mt-1 text-slate-600">
+                {t("report.printView.teachingFocus", {
+                  items: review.teachingFocus.join(t("report.printView.listSeparator")),
+                })}
+              </p>
             ) : null}
           </Section>
         ) : null}
 
         {report.uncertainty?.length ? (
-          <Section title="Limitations">
+          <Section title={t("report.printView.limitations")}>
             <ul className="list-disc pl-5 text-slate-600">
               {report.uncertainty.map((u) => (
                 <li key={u}>{u}</li>
@@ -357,7 +387,10 @@ export default function ReportPrintPage() {
         ) : null}
 
         <footer className="mt-8 border-t border-slate-200 pt-2 text-[11px] text-slate-400">
-          Exported {fmtDate(new Date().toISOString())} · Session {report.meta?.sessionId}
+          {t("report.printView.footer", {
+            date: fmtDate(new Date().toISOString(), locale),
+            id: report.meta?.sessionId,
+          })}
         </footer>
       </article>
     </div>

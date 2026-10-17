@@ -67,6 +67,27 @@ export function reviewStatusLabel(t, label) {
   return label ?? "—";
 }
 
+/**
+ * Report review status (server reviews.report_view): the header badge sends "Reviewed" /
+ * "Pending Instructor Review", the highlights card "Reviewed by {name}" / "Pending
+ * instructor review". Unknown values pass through.
+ */
+export function reportStatusLabel(t, status) {
+  if (!status) return status ?? "—";
+  if (status === "Reviewed") return t("report.statusBadge.reviewed");
+  if (status === "Pending Instructor Review") return t("report.statusBadge.pending");
+  if (status === "Pending instructor review") return t("report.statusBadge.pendingShort");
+  const m = /^Reviewed by (.+)$/.exec(status);
+  if (m) return t("report.statusBadge.reviewedBy", { name: m[1] });
+  return status;
+}
+
+/** Evidence clip type ("Error" / "Warning" / "Step", server template_report). */
+export function clipTypeLabel(t, type) {
+  if (!type) return type ?? "";
+  return t(`report.clipType.${String(type).toLowerCase()}`, { defaultValue: type });
+}
+
 /** Session lifecycle status (server/app/models.py SessionStatus). */
 export function statusLabel(t, status) {
   return t(`status.${status}`, { defaultValue: status });
