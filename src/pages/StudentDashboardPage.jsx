@@ -34,6 +34,13 @@ function scoreChangeText(t, trends) {
   return t("dashboard.trends.scoreChangeValue", { delta, count: trends.trendWindow });
 }
 
+/** Due date is stored as free text ("Nov 07, 2026"); reformat it when it parses as a date. */
+function dueDateText(formatDate, text) {
+  if (!text || !/^(\d{4}-\d{2}-\d{2}|[A-Z][a-z]{2} \d{1,2}, \d{4})$/.test(text)) return text;
+  const d = new Date(text.length === 10 ? `${text}T12:00:00` : text);
+  return Number.isNaN(d.getTime()) ? text : formatDate(d);
+}
+
 function completionText(t, trends) {
   const secs = trends.completionSeconds;
   if (!secs) return trends.completionTime;
@@ -43,7 +50,7 @@ function completionText(t, trends) {
 export default function StudentDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { t, formatDate } = useI18n();
+  const { t, locale, formatDate } = useI18n();
   const [D, setD] = useState(null);
   const [error, setError] = useState(null);
 
@@ -52,11 +59,13 @@ export default function StudentDashboardPage() {
     api("/dashboard")
       .then(setD)
       .catch((err) => setError(err instanceof Error ? err.message : t("dashboard.loadFailed")));
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
-  }, [load, user.id]);
+    // Refetch on a language switch: report-derived text (strengths, next steps) comes from
+    // the API in the requested Accept-Language.
+  }, [load, user.id, locale]);
 
   async function handleLogout() {
     await logout();
@@ -194,7 +203,7 @@ export default function StudentDashboardPage() {
               </div>
               <div className="flex flex-wrap justify-between gap-2 border-b border-slate-100 pb-2">
                 <span className="text-slate-500">{t("dashboard.currentTask.due")}</span>
-                <span className="text-slate-800">{D.currentTask.dueDate}</span>
+                <span className="text-slate-800">{dueDateText(formatDate, D.currentTask.dueDate)}</span>
               </div>
               <div className="flex flex-wrap justify-between gap-2 border-b border-slate-100 pb-2">
                 <span className="text-slate-500">{t("dashboard.currentTask.duration")}</span>

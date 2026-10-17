@@ -286,7 +286,7 @@ export default {
     less: "少",
     more: "多",
     emptyDay: "当天没有训练记录（演示数据）。",
-    recordLine: "分数 {score} · {reliability} · 教师评审：{status}",
+    recordLine: "分数 {score} · 置信度{reliability} · 教师评审：{status}",
     viewReport: "查看报告",
   },
 
