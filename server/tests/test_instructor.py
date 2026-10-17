@@ -48,6 +48,8 @@ def test_cohort_overview_flags_students(client):
     assert ("Priya Shah", "appeal") in kinds
     assert ("Lee Wong", "inactive") in kinds
     assert a["attention"][0]["severity"] == "high"
+    declining = next(x for x in a["attention"] if x["kind"] == "declining")
+    assert declining["params"]["points"] > 0 and declining["message"]
     roster = {r["name"]: r for r in a["students"]}
     assert roster["Sam Taylor"]["recentChange"] > 0
     assert set(roster["Sam Taylor"]["dimensionAverages"]) == set(a["dimensions"])

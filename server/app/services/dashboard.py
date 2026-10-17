@@ -53,6 +53,7 @@ def build_dashboard(db: Session, user: User) -> dict[str, Any]:
     in_progress = [s for s in sessions if s.status in _IN_PROGRESS]
     failed = [s for s in sessions if s.status == S.FAILED.value]
     latest = ready[-1] if ready else None
+    notices = _notifications(ready, in_progress, failed)
 
     return {
         "studentName": user.display_name,
@@ -62,7 +63,10 @@ def build_dashboard(db: Session, user: User) -> dict[str, Any]:
         "lastReport": _last_report(latest),
         "trends": _trends(ready),
         "nextSteps": (latest.report.content.get("suggestions") or [])[:3] if latest else [],
-        "notifications": _notifications(ready, in_progress, failed),
+        # English sentences (kept for older clients) plus a machine-readable form the UI
+        # renders in its own language: [{code, params, text}].
+        "notifications": [n["text"] for n in notices],
+        "notificationItems": notices,
         # Unfinished work the student can act on (watch, finish uploading, or retry).
         "inProgress": [
             {
@@ -77,6 +81,7 @@ def build_dashboard(db: Session, user: User) -> dict[str, Any]:
             {
                 "sessionId": s.id,
                 "date": (s.uploaded_at or s.created_at).strftime("%b %d, %Y"),
+                "recordedAt": (s.uploaded_at or s.created_at).isoformat() + "Z",
                 "task": s.task.name,
                 "score": s.report.overall_score,
                 "reliability": short_reliability(s.report.content.get("reliability")),
@@ -97,6 +102,7 @@ def _current_task(user: User, sessions: list[TrainingSession]) -> dict[str, Any]
         "id": task.id,
         "name": task.name,
         "status": f"In progress · {attempts} recording(s)" if attempts else "Not started",
+        "attempts": attempts,
         "dueDate": user.current_task_due or "—",
         "estimatedDuration": task.estimated_duration or "—",
         "dimensions": task.dimensions,
@@ -128,6 +134,9 @@ def _trends(ready: list[TrainingSession]) -> dict[str, Any]:
             "completionTime": "—",
             "errorCount": "—",
             "weakestDimension": "—",
+            "scoreDelta": None,
+            "trendWindow": 0,
+            "completionSeconds": None,
         }
     first, last = window[0], window[-1]
     diff = last.report.overall_score - first.report.overall_score
@@ -151,6 +160,10 @@ def _trends(ready: list[TrainingSession]) -> dict[str, Any]:
         "completionTime": completion,
         "errorCount": f"{issue_count(first.report.content)} → {issue_count(last.report.content)}",
         "weakestDimension": weakest,
+        # Raw values behind the formatted strings above, for localised rendering.
+        "scoreDelta": diff if len(window) > 1 else None,
+        "trendWindow": len(window),
+        "completionSeconds": [round(durations[0]), round(durations[-1])] if len(durations) > 1 else None,
     }
 
 
@@ -158,34 +171,48 @@ def _notifications(
     ready: list[TrainingSession],
     in_progress: list[TrainingSession],
     failed: list[TrainingSession],
-) -> list[str]:
-    notes: list[str] = []
+) -> list[dict[str, Any]]:
+    """Notices as ``{code, params, text}``; ``text`` is the English rendering."""
+    notes: list[dict[str, Any]] = []
+
+    def add(code: str, text: str, **params: Any) -> None:
+        notes.append({"code": code, "params": params, "text": text})
+
     processing = [s for s in in_progress if s.status != S.CREATED.value]
     if processing:
-        notes.append(f"{len(processing)} recording(s) are being analysed.")
+        add("processing", f"{len(processing)} recording(s) are being analysed.", count=len(processing))
     if failed:
-        notes.append(f"{len(failed)} recording(s) failed to process — open them to retry.")
+        add("failed", f"{len(failed)} recording(s) failed to process — open them to retry.", count=len(failed))
     week_ago = utcnow() - timedelta(days=7)
     recent = [s for s in ready if s.finished_at and s.finished_at >= week_ago]
     if recent:
-        notes.append(f"{len(recent)} new report(s) ready in the last 7 days.")
+        add("reportsReady", f"{len(recent)} new report(s) ready in the last 7 days.", count=len(recent))
     reviewed = [
         s for s in ready if s.review and s.review.completed_at and s.review.completed_at >= week_ago
     ]
     if reviewed:
-        notes.append(f"Your instructor reviewed {len(reviewed)} report(s) this week.")
+        add("reviewed", f"Your instructor reviewed {len(reviewed)} report(s) this week.", count=len(reviewed))
     decided = [
         a for s in ready for a in s.appeals if a.decided_at and a.decided_at >= week_ago
     ]
     if decided:
         accepted = sum(1 for a in decided if a.status == "accepted")
-        notes.append(
-            f"Your instructor decided {len(decided)} appeal(s) this week ({accepted} accepted)."
+        add(
+            "appealsDecided",
+            f"Your instructor decided {len(decided)} appeal(s) this week ({accepted} accepted).",
+            count=len(decided),
+            accepted=accepted,
         )
     pending_review = [s for s in ready if review_label(s) == "Pending"]
     if pending_review:
-        notes.append(f"{len(pending_review)} report(s) are waiting for instructor review.")
-    return notes or ["You're all caught up."]
+        add(
+            "pendingReview",
+            f"{len(pending_review)} report(s) are waiting for instructor review.",
+            count=len(pending_review),
+        )
+    if not notes:
+        add("allCaughtUp", "You're all caught up.")
+    return notes
 
 
 def build_calendar(sessions: list[TrainingSession]) -> dict[str, Any]:
