@@ -84,6 +84,8 @@ class ReportContext:
     previous_score: int | None
     evidence_video_url: str | None
     progress: ProgressFn = field(default=_no_progress, compare=False)
+    # Dimension key -> score from the student's previous report, for "since last time".
+    previous_dimensions: dict[str, int] | None = None
 
 
 class ScoringProvider(Protocol):

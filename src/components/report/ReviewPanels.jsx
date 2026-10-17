@@ -1,18 +1,14 @@
 import { useEffect, useState } from "react";
 import { api } from "../../api/client.js";
+import { formatDateTime, useI18n } from "../../i18n/index.js";
 
-function fmt(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+/** Date + time in the active locale; "" for empty/invalid input. */
+function useFmt() {
+  const { locale } = useI18n();
+  return (iso) => formatDateTime(iso, undefined, locale, "");
 }
 
-const ALIGNMENT = {
-  agree: "Agrees with AI",
-  adjusted: "Adjusted (≤10 pts)",
-  override: "Override (>10 pts)",
-};
-
+/** Labels: report.review.alignmentValues.<key>. */
 function alignmentOf(ai, final) {
   const diff = Math.abs(final - ai);
   return diff === 0 ? "agree" : diff <= 10 ? "adjusted" : "override";
@@ -45,6 +41,7 @@ function ErrorLine({ error }) {
 }
 
 function FocusChips({ value, onChange, suggestions }) {
+  const { t: tr } = useI18n();
   const [draft, setDraft] = useState("");
   function add(text) {
     const t = text.trim();
@@ -57,7 +54,7 @@ function FocusChips({ value, onChange, suggestions }) {
         {value.map((f) => (
           <span key={f} className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
             {f}
-            <button type="button" aria-label={`Remove ${f}`} onClick={() => onChange(value.filter((x) => x !== f))} className="text-brand-700/70 hover:text-brand-700">
+            <button type="button" aria-label={tr("report.review.removeFocus", { focus: f })} onClick={() => onChange(value.filter((x) => x !== f))} className="text-brand-700/70 hover:text-brand-700">
               ×
             </button>
           </span>
@@ -72,7 +69,7 @@ function FocusChips({ value, onChange, suggestions }) {
             }
           }}
           onBlur={() => draft && add(draft)}
-          placeholder="Add focus, press Enter"
+          placeholder={tr("report.review.focusPlaceholder")}
           className="min-w-[160px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1 text-sm"
         />
       </div>
@@ -91,6 +88,8 @@ function FocusChips({ value, onChange, suggestions }) {
 
 /** Instructor: score confirmation/adjustment, comment, teaching focus; draft or complete. */
 export function InstructorReviewPanel({ report, onUpdated }) {
+  const { t } = useI18n();
+  const fmt = useFmt();
   const ai = report.meta.aiScore;
   const review = report.review;
   const startScore = review?.finalScore ?? report.scores?.current ?? ai;
@@ -126,7 +125,7 @@ export function InstructorReviewPanel({ report, onUpdated }) {
     );
     if (updated) {
       onUpdated(updated);
-      setSavedMsg(complete ? "Review sent to the student." : "Draft saved — not visible to the student yet.");
+      setSavedMsg(complete ? "sent" : "draftSaved");
     }
   }
 
@@ -141,23 +140,23 @@ export function InstructorReviewPanel({ report, onUpdated }) {
   return (
     <article className="rounded-xl border border-indigo-100 bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">Instructor review</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">{t("report.instructorReview")}</h3>
         <span className="text-xs text-slate-500">
           {completed
-            ? `Sent ${fmt(review.completedAt)} by ${review.instructorName}`
+            ? t("report.review.sentBy", { date: fmt(review.completedAt), name: review.instructorName })
             : review
-              ? `Draft saved ${fmt(review.updatedAt)}`
-              : "Not reviewed yet"}
+              ? t("report.review.draftSavedAt", { date: fmt(review.updatedAt) })
+              : t("report.review.notReviewed")}
         </span>
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg bg-slate-50 px-3 py-2">
-          <p className="text-xs text-slate-500">AI score</p>
+          <p className="text-xs text-slate-500">{t("report.aiScore")}</p>
           <p className="text-2xl font-semibold text-slate-900">{ai}</p>
         </div>
         <label className="text-sm">
-          <span className="text-xs text-slate-500">Final score</span>
+          <span className="text-xs text-slate-500">{t("report.finalScore")}</span>
           <input
             type="number"
             min={0}
@@ -168,25 +167,25 @@ export function InstructorReviewPanel({ report, onUpdated }) {
           />
         </label>
         <div className="rounded-lg bg-slate-50 px-3 py-2">
-          <p className="text-xs text-slate-500">Alignment</p>
+          <p className="text-xs text-slate-500">{t("report.review.alignment")}</p>
           <p className="mt-1 text-sm font-semibold text-slate-800">
-            {scoreValid ? ALIGNMENT[alignmentOf(ai, finalScore)] : "—"}
+            {scoreValid ? t(`report.review.alignmentValues.${alignmentOf(ai, finalScore)}`) : "—"}
           </p>
         </div>
       </div>
 
       <label className="mt-4 block text-sm">
-        <span className="font-medium text-slate-700">Comment to the student</span>
+        <span className="font-medium text-slate-700">{t("report.review.commentLabel")}</span>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="What went well, what to change, and why you adjusted the score (if you did)."
+          placeholder={t("report.review.commentPlaceholder")}
           className="mt-1 h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
         />
       </label>
 
       <div className="mt-4">
-        <p className="text-sm font-medium text-slate-700">Teaching focus</p>
+        <p className="text-sm font-medium text-slate-700">{t("report.teachingFocus")}</p>
         <div className="mt-2">
           <FocusChips value={focus} onChange={setFocus} suggestions={suggestions} />
         </div>
@@ -195,28 +194,27 @@ export function InstructorReviewPanel({ report, onUpdated }) {
       <div className="mt-5 flex flex-wrap items-center gap-2">
         {!completed ? (
           <button type="button" disabled={busy || !scoreValid} onClick={() => save(false)} className="btn-secondary px-4 py-2">
-            Save draft
+            {t("report.saveDraft")}
           </button>
         ) : null}
         <button type="button" disabled={busy || !scoreValid} onClick={() => save(true)} className="btn-primary px-4 py-2">
-          {completed ? "Update review" : "Complete review"}
+          {completed ? t("report.review.updateReview") : t("report.completeReview")}
         </button>
-        {!scoreValid ? <span className="text-sm text-rose-700">Final score must be 0–100.</span> : null}
-        {savedMsg ? <span className="text-sm text-emerald-700">{savedMsg}</span> : null}
+        {!scoreValid ? <span className="text-sm text-rose-700">{t("report.review.scoreRange")}</span> : null}
+        {savedMsg ? <span className="text-sm text-emerald-700">{t(`report.review.${savedMsg}`)}</span> : null}
       </div>
       <ErrorLine error={error} />
     </article>
   );
 }
 
+/** `label` is the English fallback; shown text comes from report.appeals.reasons.<value>. */
 export const APPEAL_REASONS = [
   { value: "misdetected", label: "This didn't happen" },
   { value: "occluded", label: "The view was blocked" },
   { value: "timing", label: "Intentional / wrong moment" },
   { value: "other", label: "Other" },
 ];
-
-const REASON_LABEL = Object.fromEntries(APPEAL_REASONS.map((r) => [r.value, r.label]));
 
 function clock(seconds) {
   if (seconds == null) return null;
@@ -226,14 +224,21 @@ function clock(seconds) {
 
 /** Status chip for an appeal: icon + text, never colour alone. */
 export function AppealBadge({ status, adjustment }) {
+  const { t } = useI18n();
+  const accepted = t("report.appealAccepted");
   const styles = {
-    open: ["border-amber-200 bg-amber-50 text-amber-900", "●", "Appeal pending"],
+    open: ["border-amber-200 bg-amber-50 text-amber-900", "●", t("report.appealPending")],
     accepted: [
       "border-emerald-200 bg-emerald-50 text-emerald-800",
       "✓",
-      `Appeal accepted${adjustment ? ` · ${adjustment > 0 ? "+" : ""}${adjustment}` : ""}`,
+      adjustment
+        ? t("report.appeals.acceptedWithAdjustment", {
+            label: accepted,
+            value: `${adjustment > 0 ? "+" : ""}${adjustment}`,
+          })
+        : accepted,
     ],
-    rejected: ["border-slate-300 bg-slate-50 text-slate-700", "✕", "Appeal rejected"],
+    rejected: ["border-slate-300 bg-slate-50 text-slate-700", "✕", t("report.appealRejected")],
   };
   const [cls, icon, text] = styles[status] ?? styles.open;
   return (
@@ -246,6 +251,7 @@ export function AppealBadge({ status, adjustment }) {
 
 /** Student: dispute one timeline event (eventId) or, with eventId null, the whole report. */
 export function AppealForm({ report, eventId, onUpdated, onCancel }) {
+  const { t } = useI18n();
   const [reason, setReason] = useState(eventId ? "misdetected" : "other");
   const [message, setMessage] = useState("");
   const { busy, error, run } = useAction();
@@ -263,9 +269,9 @@ export function AppealForm({ report, eventId, onUpdated, onCancel }) {
   return (
     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm">
       <p className="font-semibold text-slate-800">
-        {eventId ? "Appeal this finding" : "Appeal the whole report"}
+        {eventId ? t("report.appealFinding") : t("report.appeals.appealWhole")}
       </p>
-      <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Reason">
+      <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label={t("report.appealReason")}>
         {APPEAL_REASONS.filter((r) => eventId || r.value === "other" || r.value === "occluded").map((r) => (
           <button
             key={r.value}
@@ -279,22 +285,22 @@ export function AppealForm({ report, eventId, onUpdated, onCancel }) {
                 : "border-slate-300 bg-white text-slate-700 hover:border-brand-300"
             }`}
           >
-            {r.label}
+            {t(`report.appeals.reasons.${r.value}`, { defaultValue: r.label })}
           </button>
         ))}
       </div>
       <textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="Explain what really happened at this moment."
+        placeholder={t("report.appeals.formPlaceholder")}
         className="mt-2 h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2"
       />
       <div className="mt-2 flex gap-2">
         <button type="button" disabled={busy || !message.trim()} onClick={submit} className="btn-primary px-4 py-1.5">
-          Send appeal
+          {t("report.appeals.send")}
         </button>
         <button type="button" onClick={onCancel} className="btn-secondary px-4 py-1.5">
-          Cancel
+          {t("report.appeals.cancel")}
         </button>
       </div>
       <ErrorLine error={error} />
@@ -304,6 +310,8 @@ export function AppealForm({ report, eventId, onUpdated, onCancel }) {
 
 /** Instructor: decide each appeal (accept → event overturned + score adjusted, or reject). */
 export function AppealsPanel({ report, onUpdated, onSeek }) {
+  const { t } = useI18n();
+  const fmt = useFmt();
   const appeals = [...(report.appeals ?? [])].sort(
     (a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1),
   );
@@ -311,15 +319,16 @@ export function AppealsPanel({ report, onUpdated, onSeek }) {
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Student appeals</h3>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">{t("report.appeals.panelTitle")}</h3>
       {fb?.kind === "accept" ? (
         <p className="mt-3 text-sm text-slate-700">
-          <span className="font-semibold text-emerald-700">✓ Accepted</span> the report on {fmt(fb.createdAt)}.
+          <span className="font-semibold text-emerald-700">{t("report.appeals.acceptedBadge")}</span>
+          {t("report.appeals.acceptedOn", { date: fmt(fb.createdAt) })}
           {fb.message ? <span className="mt-1 block text-slate-600">“{fb.message}”</span> : null}
         </p>
       ) : null}
       {!appeals.length && !fb ? (
-        <p className="mt-3 text-sm text-slate-600">The student has not responded to this report yet.</p>
+        <p className="mt-3 text-sm text-slate-600">{t("report.appeals.noResponse")}</p>
       ) : null}
       <ul className="mt-3 space-y-3">
         {appeals.map((a) => (
@@ -331,6 +340,8 @@ export function AppealsPanel({ report, onUpdated, onSeek }) {
 }
 
 function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
+  const { t } = useI18n();
+  const fmt = useFmt();
   const [decision, setDecision] = useState("accept");
   const [adjustment, setAdjustment] = useState(a.suggestedAdjustment);
   const [note, setNote] = useState("");
@@ -354,16 +365,16 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
             type="button"
             onClick={() => onSeek(a.eventTime)}
             className="rounded-md border border-brand-200 px-2 py-0.5 text-xs font-semibold text-brand-700 hover:bg-brand-50"
-            title="Play the recording from this moment"
+            title={t("report.appeals.playFrom")}
           >
             ▶ {clock(a.eventTime)}
           </button>
         ) : null}
-        <span className="font-semibold text-slate-900">{a.eventLabel ?? "Whole report"}</span>
+        <span className="font-semibold text-slate-900">{a.eventLabel ?? t("report.appeals.wholeReport")}</span>
         <AppealBadge status={a.status} adjustment={a.scoreAdjustment} />
       </div>
       <p className="mt-1 text-xs text-slate-500">
-        {REASON_LABEL[a.reason] ?? a.reason} · {fmt(a.createdAt)}
+        {t(`report.appeals.reasons.${a.reason}`, { defaultValue: a.reason })} · {fmt(a.createdAt)}
       </p>
       <blockquote className="mt-2 rounded-md border-l-4 border-slate-300 bg-slate-50 px-3 py-2 text-slate-800">
         {a.message}
@@ -375,13 +386,13 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
             {["accept", "reject"].map((d) => (
               <label key={d} className="flex items-center gap-1.5 text-sm">
                 <input type="radio" name={`decision-${a.id}`} checked={decision === d} onChange={() => setDecision(d)} />
-                {d === "accept" ? "Accept — overturn this finding" : "Reject — keep the finding"}
+                {d === "accept" ? t("report.appeals.decisionAccept") : t("report.appeals.decisionReject")}
               </label>
             ))}
           </div>
           {decision === "accept" ? (
             <label className="flex items-center gap-2 text-sm text-slate-700">
-              Score adjustment
+              {t("report.appeals.scoreAdjustment")}
               <input
                 type="number"
                 min={-20}
@@ -390,13 +401,17 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
                 onChange={(e) => setAdjustment(e.target.value === "" ? NaN : Number(e.target.value))}
                 className="w-20 rounded-md border border-slate-300 px-2 py-1"
               />
-              <span className="text-xs text-slate-500">suggested {a.suggestedAdjustment >= 0 ? "+" : ""}{a.suggestedAdjustment}</span>
+              <span className="text-xs text-slate-500">
+                {t("report.appeals.suggested", {
+                  value: `${a.suggestedAdjustment >= 0 ? "+" : ""}${a.suggestedAdjustment}`,
+                })}
+              </span>
             </label>
           ) : null}
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Explain your decision to the student."
+            placeholder={t("report.appeals.decisionPlaceholder")}
             className="h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2"
           />
           <button
@@ -405,7 +420,7 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
             onClick={submit}
             className="btn-primary px-4 py-1.5"
           >
-            Send decision
+            {t("report.appeals.sendDecision")}
           </button>
         </div>
       ) : (
@@ -423,9 +438,11 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
 
 /** Student: the instructor's completed review, if any. */
 export function ReviewResultCard({ review }) {
+  const { t } = useI18n();
+  const fmt = useFmt();
   return (
     <article className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">Instructor evaluation</h3>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">{t("report.evaluation.title")}</h3>
       {review ? (
         <div className="mt-3 space-y-2 text-sm text-slate-700">
           <p>
@@ -433,8 +450,11 @@ export function ReviewResultCard({ review }) {
             <span className="text-xs text-slate-500"> · {fmt(review.completedAt)}</span>
           </p>
           <p>
-            Final score <span className="text-xl font-semibold text-slate-900">{review.finalScore}</span>
-            {review.finalScore !== review.aiScore ? <span className="text-slate-500"> (AI: {review.aiScore})</span> : null}
+            {t("report.evaluation.finalScore")}
+            <span className="text-xl font-semibold text-slate-900">{review.finalScore}</span>
+            {review.finalScore !== review.aiScore ? (
+              <span className="text-slate-500">{t("report.evaluation.aiSuffix", { score: review.aiScore })}</span>
+            ) : null}
           </p>
           {review.comment ? <p className="rounded-lg bg-white px-3 py-2 leading-6">{review.comment}</p> : null}
           {review.teachingFocus?.length ? (
@@ -448,7 +468,7 @@ export function ReviewResultCard({ review }) {
           ) : null}
         </div>
       ) : (
-        <p className="mt-3 text-sm italic text-slate-500">Your instructor has not reviewed this report yet.</p>
+        <p className="mt-3 text-sm italic text-slate-500">{t("report.evaluation.notYet")}</p>
       )}
     </article>
   );
@@ -456,6 +476,8 @@ export function ReviewResultCard({ review }) {
 
 /** Student: accept the report, track appeals, or appeal the report as a whole. */
 export function StudentResponseCard({ report, onUpdated }) {
+  const { t } = useI18n();
+  const fmt = useFmt();
   const fb = report.feedback;
   const appeals = report.appeals ?? [];
   const openCount = appeals.filter((a) => a.status === "open").length;
@@ -478,17 +500,18 @@ export function StudentResponseCard({ report, onUpdated }) {
 
   return (
     <article className="rounded-xl border border-slate-200 bg-slate-50/80 p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Your response</h3>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">{t("report.response.title")}</h3>
 
       {fb?.kind === "accept" ? (
         <p className="mt-3 text-sm">
-          <span className="font-semibold text-emerald-700">✓ You accepted this report</span>{" "}
+          <span className="font-semibold text-emerald-700">{t("report.response.youAccepted")}</span>{" "}
           <span className="text-xs text-slate-500">{fmt(fb.createdAt)}</span>
         </p>
       ) : (
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Agree with the report? Accept it. Think a finding is wrong? Use <strong>Appeal</strong> on that
-          moment in the timeline — your instructor will review the clip and decide.
+          {t("report.response.intro.before")}
+          <strong>{t("report.response.intro.strong")}</strong>
+          {t("report.response.intro.after")}
         </p>
       )}
 
@@ -500,13 +523,13 @@ export function StudentResponseCard({ report, onUpdated }) {
                 {a.eventTime != null ? (
                   <span className="text-xs font-semibold text-brand-700">{clock(a.eventTime)}</span>
                 ) : null}
-                <span className="font-medium text-slate-900">{a.eventLabel ?? "Whole report"}</span>
+                <span className="font-medium text-slate-900">{a.eventLabel ?? t("report.appeals.wholeReport")}</span>
                 <AppealBadge status={a.status} adjustment={a.scoreAdjustment} />
               </div>
               <p className="mt-1 text-slate-600">“{a.message}”</p>
               {a.status === "open" ? (
                 <button type="button" disabled={busy} onClick={() => withdraw(a.id)} className="link-brand mt-1 text-xs">
-                  Withdraw
+                  {t("report.response.withdraw")}
                 </button>
               ) : (
                 <div className="mt-2 rounded-md bg-indigo-50 px-3 py-2">
@@ -539,14 +562,14 @@ export function StudentResponseCard({ report, onUpdated }) {
               disabled={busy || openCount > 0}
               onClick={accept}
               className="btn-primary px-4 py-2"
-              title={openCount ? "Wait for your open appeals to be decided first" : undefined}
+              title={openCount ? t("report.response.waitForAppeals") : undefined}
             >
-              Accept report
+              {t("report.accept")}
             </button>
           ) : null}
           {canAppealMore && !wholeAppealed ? (
             <button type="button" onClick={() => setAppealing(true)} className="btn-secondary px-4 py-2">
-              Appeal the whole report
+              {t("report.appeals.appealWhole")}
             </button>
           ) : null}
         </div>
@@ -558,6 +581,7 @@ export function StudentResponseCard({ report, onUpdated }) {
 
 /** Student: private reflection saved with the report. */
 export function PersonalNoteCard({ report, onUpdated }) {
+  const { t } = useI18n();
   const [note, setNote] = useState(report.personalNote ?? "");
   const [saved, setSaved] = useState(true);
   const { busy, error, run } = useAction();
@@ -577,22 +601,22 @@ export function PersonalNoteCard({ report, onUpdated }) {
 
   return (
     <article className="rounded-xl border border-slate-200 bg-slate-50/80 p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Personal note</h3>
-      <p className="mt-1 text-xs text-slate-500">Private — your instructor can't see it.</p>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">{t("report.personalNote")}</h3>
+      <p className="mt-1 text-xs text-slate-500">{t("report.note.private")}</p>
       <textarea
         value={note}
         onChange={(e) => {
           setNote(e.target.value);
           setSaved(false);
         }}
-        placeholder="Write your reflection here..."
+        placeholder={t("report.note.placeholder")}
         className="mt-3 h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
       />
       <div className="mt-2 flex items-center gap-3">
         <button type="button" disabled={busy || saved} onClick={save} className="btn-secondary px-4 py-1.5">
-          Save note
+          {t("report.note.save")}
         </button>
-        <span className="text-xs text-slate-500">{saved ? "Saved" : "Unsaved changes"}</span>
+        <span className="text-xs text-slate-500">{saved ? t("report.note.saved") : t("report.note.unsaved")}</span>
       </div>
       <ErrorLine error={error} />
     </article>

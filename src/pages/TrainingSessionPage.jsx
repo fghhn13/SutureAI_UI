@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, uploadWithProgress } from "../api/client.js";
-import { STATUS_LABELS, TERMINAL_STATUSES } from "../api/sessionStatus.js";
+import { TERMINAL_STATUSES } from "../api/sessionStatus.js";
+import LanguageSwitch from "../components/LanguageSwitch.jsx";
 import ProcessingPanel from "../components/ProcessingPanel.jsx";
+import { durationLabel, statusLabel, taskDescription, taskName, useI18n } from "../i18n/index.js";
 
 const POLL_MS = 1000;
 const AUTO_OPEN_MS = 2500;
@@ -36,16 +38,17 @@ function readVideoDuration(url) {
 }
 
 function TaskPicker({ tasks, selectedId, onSelect, disabled }) {
+  const { t } = useI18n();
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {tasks.map((t) => {
-        const active = t.id === selectedId;
+      {tasks.map((task) => {
+        const active = task.id === selectedId;
         return (
           <button
-            key={t.id}
+            key={task.id}
             type="button"
             disabled={disabled}
-            onClick={() => onSelect(t.id)}
+            onClick={() => onSelect(task.id)}
             aria-pressed={active}
             className={`rounded-xl border p-4 text-left transition-all duration-200 disabled:cursor-not-allowed ${
               active
@@ -53,10 +56,11 @@ function TaskPicker({ tasks, selectedId, onSelect, disabled }) {
                 : "border-slate-200 bg-white hover:border-brand-200 hover:bg-brand-50/40"
             }`}
           >
-            <p className="font-semibold text-slate-900">{t.name}</p>
-            <p className="mt-1 text-xs text-slate-600">{t.description}</p>
+            <p className="font-semibold text-slate-900">{taskName(t, task.id, task.name)}</p>
+            <p className="mt-1 text-xs text-slate-600">{taskDescription(t, task)}</p>
             <p className="mt-2 text-xs text-slate-500">
-              {t.estimatedDuration ?? "—"} · {t.dimensions.length} dimensions
+              {durationLabel(t, task.estimatedDuration)} ·{" "}
+              {t("train.dimensionsCount", { count: task.dimensions.length })}
             </p>
           </button>
         );
@@ -66,6 +70,7 @@ function TaskPicker({ tasks, selectedId, onSelect, disabled }) {
 }
 
 function VideoDropZone({ file, previewUrl, duration, onFile, disabled }) {
+  const { t } = useI18n();
   const inputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -101,9 +106,9 @@ function VideoDropZone({ file, previewUrl, duration, onFile, disabled }) {
         } ${disabled ? "pointer-events-none opacity-60" : ""}`}
       >
         <p className="text-sm font-semibold text-slate-800">
-          {file ? "Choose a different video" : "Drop your training video here, or click to browse"}
+          {file ? t("train.dropChange") : t("train.dropPrompt")}
         </p>
-        <p className="mt-1 text-xs text-slate-500">MP4, WebM, MOV or MKV</p>
+        <p className="mt-1 text-xs text-slate-500">{t("train.formats")}</p>
         <input
           ref={inputRef}
           type="file"
@@ -126,17 +131,17 @@ function VideoDropZone({ file, previewUrl, duration, onFile, disabled }) {
           />
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">File</dt>
+              <dt className="text-slate-500">{t("train.file")}</dt>
               <dd className="truncate font-medium text-slate-900" title={file.name}>
                 {file.name}
               </dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">Size</dt>
+              <dt className="text-slate-500">{t("train.size")}</dt>
               <dd className="text-slate-800">{formatBytes(file.size)}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Duration</dt>
+              <dt className="text-slate-500">{t("train.duration")}</dt>
               <dd className="text-slate-800">{duration != null ? formatSeconds(duration) : "—"}</dd>
             </div>
           </dl>
@@ -150,6 +155,7 @@ export default function TrainingSessionPage() {
   const { sessionId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const [tasks, setTasks] = useState([]);
   const [taskId, setTaskId] = useState(searchParams.get("task") ?? "");
@@ -173,7 +179,7 @@ export default function TrainingSessionPage() {
     api("/tasks")
       .then((list) => {
         setTasks(list);
-        setTaskId((cur) => (list.some((t) => t.id === cur) ? cur : list[0]?.id ?? ""));
+        setTaskId((cur) => (list.some((task) => task.id === cur) ? cur : list[0]?.id ?? ""));
       })
       .catch((err) => setLoadError(err.message));
   }, []);
@@ -231,7 +237,7 @@ export default function TrainingSessionPage() {
   const handleFile = useCallback(async (f) => {
     setFileError(null);
     if (!isAcceptedVideo(f)) {
-      setFileError("That file does not look like a video. Use MP4, WebM, MOV or MKV.");
+      setFileError("train.notVideo"); // dictionary key, rendered with t()
       return;
     }
     const url = URL.createObjectURL(f);
@@ -293,16 +299,16 @@ export default function TrainingSessionPage() {
   }
 
   const needsUpload = !session || session.status === "created";
-  const selectedTask = tasks.find((t) => t.id === taskId) ?? session?.task;
+  const selectedTask = tasks.find((task) => task.id === taskId) ?? session?.task;
 
   if (loadError) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-16">
         <Link to="/" className="link-brand text-sm">
-          Student dashboard
+          {t("train.backToDashboard")}
         </Link>
         <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
-          <p className="font-semibold">Could not load this training session</p>
+          <p className="font-semibold">{t("train.loadFailedTitle")}</p>
           <p className="mt-2 text-sm">{loadError}</p>
         </div>
       </main>
@@ -311,26 +317,33 @@ export default function TrainingSessionPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-8">
-      <Link to="/" className="link-brand text-sm font-medium">
-        Student dashboard
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link to="/" className="link-brand text-sm font-medium">
+          {t("train.backToDashboard")}
+        </Link>
+        <LanguageSwitch />
+      </div>
 
       <header className="surface-card mt-4 p-6">
-        <p className="text-sm font-semibold tracking-wide text-brand-700">SutureAI</p>
+        <p className="text-sm font-semibold tracking-wide text-brand-700">{t("common.appName")}</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-900">
-          {needsUpload ? "Start a training session" : selectedTask?.name ?? "Training session"}
+          {needsUpload
+            ? t("train.titleNew")
+            : selectedTask
+              ? taskName(t, selectedTask.id, selectedTask.name)
+              : t("train.titleFallback")}
         </h1>
         <p className="mt-2 text-sm text-slate-600">
           {needsUpload
-            ? "Pick the task you practised, upload the recording, and we'll score it and write your report."
-            : `Status: ${STATUS_LABELS[session.status] ?? session.status}`}
+            ? t("train.introNew")
+            : t("train.statusLine", { status: statusLabel(t, session.status) })}
         </p>
       </header>
 
       {needsUpload ? (
         <>
           <section className="surface-card mt-6 p-6">
-            <h2 className="text-lg font-semibold text-slate-900">1. Task</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("train.stepTask")}</h2>
             <div className="mt-4">
               {tasks.length ? (
                 <TaskPicker
@@ -340,13 +353,13 @@ export default function TrainingSessionPage() {
                   disabled={uploading || Boolean(session)}
                 />
               ) : (
-                <p className="text-sm text-slate-500">Loading tasks…</p>
+                <p className="text-sm text-slate-500">{t("train.loadingTasks")}</p>
               )}
             </div>
           </section>
 
           <section className="surface-card mt-6 p-6">
-            <h2 className="text-lg font-semibold text-slate-900">2. Recording</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("train.stepRecording")}</h2>
             <div className="mt-4">
               <VideoDropZone
                 file={file}
@@ -357,7 +370,7 @@ export default function TrainingSessionPage() {
               />
               {fileError ? (
                 <p className="mt-3 text-sm text-rose-700" role="alert">
-                  {fileError}
+                  {t(fileError)}
                 </p>
               ) : null}
             </div>
@@ -367,7 +380,7 @@ export default function TrainingSessionPage() {
             {uploading ? (
               <div>
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-slate-800">Uploading…</span>
+                  <span className="font-medium text-slate-800">{t("train.uploading")}</span>
                   <span className="tabular-nums text-slate-600">{Math.round(progress * 100)}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -381,7 +394,7 @@ export default function TrainingSessionPage() {
                   onClick={() => abortRef.current?.abort()}
                   className="btn-secondary mt-4 px-4 py-2 text-sm"
                 >
-                  Cancel upload
+                  {t("train.cancelUpload")}
                 </button>
               </div>
             ) : (
@@ -392,9 +405,9 @@ export default function TrainingSessionPage() {
                   onClick={handleUpload}
                   className="btn-primary"
                 >
-                  Upload &amp; analyse
+                  {t("train.uploadAnalyse")}
                 </button>
-                {!file ? <span className="text-sm text-slate-500">Choose a video to continue.</span> : null}
+                {!file ? <span className="text-sm text-slate-500">{t("train.chooseVideo")}</span> : null}
               </div>
             )}
             {actionError ? (
@@ -411,38 +424,38 @@ export default function TrainingSessionPage() {
           {session.status === "ready" ? (
             <div className="mt-6 flex flex-wrap items-center gap-4">
               <p className="text-sm text-slate-700">
-                Overall score{" "}
+                {t("train.overallScore")}{" "}
                 <span className="text-2xl font-bold text-brand-700">{session.overallScore}</span>
-                <span className="text-slate-500"> / 100</span>
-                {autoOpening ? <span className="ml-3 text-slate-500">Opening your report…</span> : null}
+                <span className="text-slate-500"> {t("common.outOf100")}</span>
+                {autoOpening ? <span className="ml-3 text-slate-500">{t("train.openingReport")}</span> : null}
               </p>
               <Link
                 to={{ pathname: "/report", search: `?session=${encodeURIComponent(session.id)}` }}
                 className="btn-primary inline-flex"
               >
-                View report
+                {t("train.viewReport")}
               </Link>
               <button type="button" onClick={startAnother} className="btn-secondary">
-                Record another
+                {t("train.recordAnother")}
               </button>
             </div>
           ) : session.status === "failed" ? (
             <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
-              <p className="font-semibold">Processing failed</p>
-              <p className="mt-1 break-words">{session.error ?? "Unknown error."}</p>
+              <p className="font-semibold">{t("train.failedTitle")}</p>
+              <p className="mt-1 break-words">{session.error ?? t("train.unknownError")}</p>
               <button type="button" onClick={handleRetry} className="btn-primary mt-3 px-4 py-2">
-                Retry
+                {t("train.retry")}
               </button>
             </div>
           ) : (
             <p className="mt-6 text-sm text-slate-600">
-              You can leave this page — the report will show up on your dashboard when it is ready.
+              {t("train.leaveHint")}
             </p>
           )}
 
           {session.video ? (
             <p className="mt-6 text-xs text-slate-500">
-              {session.video.originalFilename ?? "Video"} · {formatBytes(session.video.sizeBytes)}
+              {session.video.originalFilename ?? t("train.video")} · {formatBytes(session.video.sizeBytes)}
               {session.video.durationS != null ? ` · ${formatSeconds(session.video.durationS)}` : ""}
             </p>
           ) : null}

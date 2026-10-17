@@ -90,14 +90,16 @@ def attention_items(
     """Reasons an instructor should look at this student now."""
     items: list[dict[str, Any]] = []
 
-    def add(kind: str, severity: str, message: str, session_id: str | None = None):
+    def add(kind: str, severity: str, message: str, session_id: str | None = None, **params: Any):
         items.append(
             {
                 "studentId": student.id,
                 "studentName": student.display_name,
                 "kind": kind,
                 "severity": severity,
+                # English sentence (compat); the UI renders kind + params in its own language.
                 "message": message,
+                "params": params,
                 "sessionId": session_id,
             }
         )
@@ -105,24 +107,33 @@ def attention_items(
     for s in _ready(sessions):
         n = len(open_appeals(s))
         if n:
-            add("appeal", "high", f"Appealed {n} finding(s) in {s.task.name}", s.id)
+            add(
+                "appeal", "high", f"Appealed {n} finding(s) in {s.task.name}", s.id,
+                count=n, taskId=s.task.id, taskName=s.task.name,
+            )
 
     change = stats["recentChange"]
     if change is not None and stats["totalReports"] >= 3 and change <= DECLINE_THRESHOLD:
-        add("declining", "high", f"Scores down {abs(change)} pts over their last few sessions")
+        add(
+            "declining", "high", f"Scores down {abs(change)} pts over their last few sessions",
+            points=abs(change),
+        )
 
     latest = stats["latestScore"]
     if latest is not None and latest < LOW_SCORE:
-        add("low_score", "medium", f"Latest score {latest} is below {LOW_SCORE}")
+        add("low_score", "medium", f"Latest score {latest} is below {LOW_SCORE}", score=latest, threshold=LOW_SCORE)
 
     days = stats["daysSinceActive"]
     if days is None:
-        add("inactive", "medium", "Has not recorded any training yet")
+        add("inactive", "medium", "Has not recorded any training yet", days=None)
     elif days >= INACTIVE_DAYS:
-        add("inactive", "medium", f"No training for {days} days")
+        add("inactive", "medium", f"No training for {days} days", days=days)
 
     if stats["failedSessions"]:
-        add("failed", "low", f"{stats['failedSessions']} recording(s) failed to process")
+        add(
+            "failed", "low", f"{stats['failedSessions']} recording(s) failed to process",
+            count=stats["failedSessions"],
+        )
     return items
 
 
