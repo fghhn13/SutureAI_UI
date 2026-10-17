@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { dimensionName, useI18n } from "../../i18n/index.js";
 import { BLUE_RAMP, rampColor } from "./tokens.js";
 
 const LO = 40;
@@ -11,16 +12,17 @@ const HI = 95;
  *   cohortAverages?: Record<string, number|null> }} props
  */
 export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
+  const { t } = useI18n();
   return (
     <div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[420px] border-separate text-sm" style={{ borderSpacing: 2 }}>
           <thead>
             <tr>
-              <th className="pb-2 pr-2 text-left text-xs font-semibold text-slate-500">Student</th>
+              <th className="pb-2 pr-2 text-left text-xs font-semibold text-slate-500">{t("charts.heatmap.student")}</th>
               {dimensions.map((d) => (
                 <th key={d} className="px-1 pb-2 text-center text-xs font-semibold text-slate-500">
-                  {d}
+                  {dimensionName(t, d)}
                 </th>
               ))}
             </tr>
@@ -41,7 +43,7 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
                         key={d}
                         className="h-9 rounded text-center text-xs text-slate-400"
                         style={{ background: "repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 4px,#fff 4px,#fff 8px)" }}
-                        title={`${row.name} · ${d}: no data yet`}
+                        title={t("charts.heatmap.noData", { name: row.name, dimension: dimensionName(t, d) })}
                       >
                         —
                       </td>
@@ -52,7 +54,7 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
                     <td
                       key={d}
                       tabIndex={0}
-                      title={`${row.name} · ${d}: ${v} (avg of recent reports)`}
+                      title={t("charts.heatmap.cell", { name: row.name, dimension: dimensionName(t, d), value: v })}
                       className="h-9 rounded text-center font-semibold tabular-nums outline-none transition-shadow hover:ring-2 hover:ring-slate-900/30 focus-visible:ring-2 focus-visible:ring-slate-900/40"
                       style={{ background: fill, color: ink }}
                     >
@@ -67,7 +69,7 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
             <tfoot>
               <tr>
                 <th scope="row" className="pr-2 pt-2 text-left text-xs font-semibold text-slate-500">
-                  Cohort average
+                  {t("charts.heatmap.cohortAverage")}
                 </th>
                 {dimensions.map((d) => (
                   <td key={d} className="pt-2 text-center text-xs font-semibold tabular-nums text-slate-700">
@@ -80,13 +82,13 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
         </table>
       </div>
       <div className="mt-3 flex items-center gap-2 text-xs text-slate-500" aria-hidden>
-        <span>{LO} or lower</span>
+        <span>{t("charts.heatmap.low", { value: LO })}</span>
         <span
           className="h-2 w-40 rounded"
           style={{ background: `linear-gradient(90deg, ${BLUE_RAMP.join(",")})` }}
         />
-        <span>{HI}+</span>
-        <span className="ml-2">Average of each student's last 5 reports</span>
+        <span>{t("charts.heatmap.high", { value: HI })}</span>
+        <span className="ml-2">{t("charts.heatmap.note")}</span>
       </div>
     </div>
   );

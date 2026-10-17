@@ -160,3 +160,7 @@ def test_dashboard(alex, app):
     d = alex.get("/api/dashboard").json()
     assert d["inProgress"][0]["sessionId"] == s["id"]
     assert any("being analysed" in n for n in d["notifications"])
+    # Machine-readable twin of `notifications`, for client-side translation.
+    items = {n["code"]: n for n in d["notificationItems"]}
+    assert items["processing"]["params"] == {"count": 1}
+    assert [n["text"] for n in d["notificationItems"]] == d["notifications"]

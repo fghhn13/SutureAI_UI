@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { STAGES, activeStageIndex } from "../api/sessionStatus.js";
+import { intlLocale, useI18n } from "../i18n/index.js";
 
 const FEED_LINES = 6;
 
@@ -9,12 +10,12 @@ function fmtClock(s) {
 }
 
 /** Fill a detail template with plausible values for this recording. */
-function fillTemplate(text, { progress, durationS, sizeBytes }) {
+function fillTemplate(text, { progress, durationS, sizeBytes, locale }) {
   const frames = Math.max(300, Math.round((durationS || 116) * 30));
   const frame = Math.min(frames, Math.round(frames * (0.08 + 0.9 * progress) + Math.random() * 40));
   return text
-    .replace("{frames}", frames.toLocaleString("en-US"))
-    .replace("{frame}", frame.toLocaleString("en-US"))
+    .replace("{frames}", frames.toLocaleString(intlLocale(locale)))
+    .replace("{frame}", frame.toLocaleString(intlLocale(locale)))
     .replace("{conf}", (0.86 + Math.random() * 0.12).toFixed(2))
     .replace("{hz}", (4 + Math.random() * 3.5).toFixed(1))
     .replace("{mb}", ((sizeBytes || 0) / 1024 / 1024).toFixed(1))
@@ -26,6 +27,8 @@ function fillTemplate(text, { progress, durationS, sizeBytes }) {
  * and a rolling activity feed so the wait never looks frozen.
  */
 export default function ProcessingPanel({ session }) {
+  const { t, tRaw, locale } = useI18n();
+  const stageLabel = (key) => t(`processing.stages.${key}.label`);
   const serverProgress = session.status === "ready" ? 1 : session.progress ?? 0;
   const stageIdx = activeStageIndex(session);
   const running = !["ready", "failed"].includes(session.status);
@@ -51,25 +54,32 @@ export default function ProcessingPanel({ session }) {
   useEffect(() => {
     if (!running) return undefined;
     const stage = STAGES[Math.min(stageIdx, STAGES.length - 1)];
-    const ctx = { progress: serverProgress, durationS: session.video?.durationS, sizeBytes: session.video?.sizeBytes };
+    const details = tRaw(`processing.stages.${stage.key}.details`) ?? [];
+    const ctx = {
+      progress: serverProgress,
+      durationS: session.video?.durationS,
+      sizeBytes: session.video?.sizeBytes,
+      locale,
+    };
     const push = (text, kind = "work") =>
       setFeed((f) => [...f, { id: `${Date.now()}-${Math.random()}`, text, kind }].slice(-FEED_LINES));
 
     if (lastStageRef.current !== stageIdx) {
       for (let i = lastStageRef.current; i < stageIdx; i += 1) {
-        if (STAGES[i]) push(`${STAGES[i].label} — done`, "done");
+        if (STAGES[i]) push(t("processing.stageDone", { stage: stageLabel(STAGES[i].key) }), "done");
       }
       lastStageRef.current = stageIdx;
     }
     let n = 0;
     const tick = () => {
-      push(fillTemplate(stage.details[n % stage.details.length], ctx));
+      if (details.length) push(fillTemplate(details[n % details.length], ctx));
       n += 1;
     };
     tick();
     const id = setInterval(tick, 650 + Math.random() * 450);
     return () => clearInterval(id);
-  }, [stageIdx, running]);
+    // Restarting on a language switch makes new lines appear in the chosen language.
+  }, [stageIdx, running, locale]);
 
   const elapsed = (Date.now() - startRef.current.t) / 1000;
   const gained = shown - startRef.current.p;
@@ -86,17 +96,18 @@ export default function ProcessingPanel({ session }) {
           </p>
           <p className="pb-1 text-sm text-slate-500">
             {session.status === "ready"
-              ? "Complete"
+              ? t("processing.complete")
               : session.status === "failed"
-                ? "Stopped"
+                ? t("processing.stopped")
                 : eta != null
-                  ? `About ${Math.max(1, Math.round(eta))} s left`
-                  : "Estimating time…"}
+                  ? t("processing.eta", { seconds: Math.max(1, Math.round(eta)) })
+                  : t("processing.estimating")}
           </p>
         </div>
         <div
           className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100"
           role="progressbar"
+          aria-label={t("processing.progressLabel")}
           aria-valuenow={pct}
           aria-valuemin={0}
           aria-valuemax={100}
@@ -135,7 +146,7 @@ export default function ProcessingPanel({ session }) {
                     done ? "text-slate-700" : active ? "font-semibold text-brand-700" : failedHere ? "font-semibold text-rose-700" : "text-slate-400"
                   }
                 >
-                  {s.label}
+                  {stageLabel(s.key)}
                 </span>
               </li>
             );
@@ -144,7 +155,7 @@ export default function ProcessingPanel({ session }) {
       </div>
 
       <div className="flex min-h-[220px] flex-col rounded-xl bg-slate-900 p-4 font-mono text-[12.5px] leading-6 text-slate-300">
-        <p className="mb-2 text-[11px] uppercase tracking-wider text-slate-500">Activity</p>
+        <p className="mb-2 text-[11px] uppercase tracking-wider text-slate-500">{t("processing.activity")}</p>
         <ul className="flex-1 space-y-0.5" aria-live="polite">
           {feed.map((line, i) => {
             const latest = i === feed.length - 1 && running;
@@ -165,7 +176,7 @@ export default function ProcessingPanel({ session }) {
           {session.status === "ready" ? (
             <li className="flex gap-2 text-emerald-400">
               <span className="w-3">✓</span>
-              <span>Report ready.</span>
+              <span>{t("processing.reportReady")}</span>
             </li>
           ) : null}
         </ul>

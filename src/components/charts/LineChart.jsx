@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useI18n } from "../../i18n/index.js";
 import { CHART } from "./tokens.js";
 
 function useWidth(ref) {
@@ -21,7 +22,7 @@ function useWidth(ref) {
  * @param {{
  *   points: { key: string, value: number, label: string, detail?: string }[],
  *   height?: number, min?: number, max?: number, compact?: boolean,
- *   ariaLabel: string, valueLabel?: string, onSelect?: (p: any) => void,
+ *   ariaLabel: string, valueLabel?: string (defaults to "Score", localised), onSelect?: (p: any) => void,
  * }} props
  */
 export default function LineChart({
@@ -31,9 +32,10 @@ export default function LineChart({
   max = 100,
   compact = false,
   ariaLabel,
-  valueLabel = "Score",
+  valueLabel,
   onSelect,
 }) {
+  const { t } = useI18n();
   const wrapRef = useRef(null);
   const width = useWidth(wrapRef);
   const [active, setActive] = useState(null);
@@ -146,7 +148,7 @@ export default function LineChart({
           <p className="flex items-center gap-1.5">
             <span className="inline-block h-0.5 w-3 rounded" style={{ background: CHART.series }} />
             <span className="text-sm font-semibold text-slate-900">{hovered.value}</span>
-            <span className="text-slate-500">{valueLabel}</span>
+            <span className="text-slate-500">{valueLabel ?? t("charts.score")}</span>
           </p>
           <p className="text-slate-600">{hovered.label}</p>
           {hovered.detail ? <p className="text-slate-500">{hovered.detail}</p> : null}

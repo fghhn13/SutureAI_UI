@@ -1,11 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { DEMO_ACCOUNTS, homePathFor } from "../auth/demoAccounts.js";
+import { useI18n } from "../i18n/index.js";
 
 /** Dev-only floating switcher between seeded demo accounts. */
 export default function DevUserSwitch() {
   const { user, devSwitchUser } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
   if (!import.meta.env.DEV || !user) return null;
 
   async function onChange(e) {
@@ -15,9 +17,9 @@ export default function DevUserSwitch() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 shadow-lg transition-all duration-200 hover:border-amber-300 hover:shadow-xl">
-      <span className="text-xs font-semibold uppercase tracking-wide text-amber-900">Dev</span>
+      <span className="text-xs font-semibold uppercase tracking-wide text-amber-900">{t("devSwitch.badge")}</span>
       <label htmlFor="dev-user-switch" className="sr-only">
-        Switch demo user
+        {t("devSwitch.label")}
       </label>
       <select
         id="dev-user-switch"
@@ -27,7 +29,7 @@ export default function DevUserSwitch() {
       >
         {DEMO_ACCOUNTS.map((acc) => (
           <option key={acc.login} value={acc.login}>
-            {acc.displayName} ({acc.note})
+            {acc.displayName} ({t(`login.demoNotes.${acc.login.split("@")[0]}`, { defaultValue: acc.note })})
           </option>
         ))}
       </select>

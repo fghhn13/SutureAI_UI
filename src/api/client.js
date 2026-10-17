@@ -1,7 +1,10 @@
 /**
  * Thin fetch wrapper for the FastAPI backend (`/api/*`, proxied by Vite in dev).
  * Auth is an httpOnly session cookie, so no token handling here.
+ * Every request carries the UI language as Accept-Language (zh-CN or en).
  */
+import { apiLanguage } from "../i18n/locale.js";
+import { t } from "../i18n/translate.js";
 
 const API_ROOT = `${(import.meta.env.BASE_URL ?? "/").replace(/\/$/, "")}/api`;
 
@@ -20,7 +23,7 @@ export function apiUrl(path) {
 }
 
 async function errorFromResponse(res) {
-  let message = `Request failed (${res.status})`;
+  let message = t("api.requestFailed", { status: res.status });
   try {
     const body = await res.json();
     if (typeof body?.detail === "string") message = body.detail;
@@ -40,7 +43,10 @@ export async function api(path, { method = "GET", body, signal } = {}) {
     method,
     signal,
     credentials: "same-origin",
-    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    headers: {
+      "Accept-Language": apiLanguage(),
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) throw await errorFromResponse(res);
@@ -59,6 +65,7 @@ export function uploadWithProgress(path, formData, { onProgress, signal } = {}) 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", apiUrl(path));
     xhr.withCredentials = true;
+    xhr.setRequestHeader("Accept-Language", apiLanguage());
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress?.(e.loaded / e.total);
     };
@@ -72,11 +79,11 @@ export function uploadWithProgress(path, formData, { onProgress, signal } = {}) 
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(body);
       } else {
-        const detail = typeof body?.detail === "string" ? body.detail : `Upload failed (${xhr.status})`;
+        const detail = typeof body?.detail === "string" ? body.detail : t("api.uploadFailed", { status: xhr.status });
         reject(new ApiError(xhr.status, detail));
       }
     };
-    xhr.onerror = () => reject(new ApiError(0, "Network error during upload."));
+    xhr.onerror = () => reject(new ApiError(0, t("api.networkError")));
     xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
     signal?.addEventListener("abort", () => xhr.abort());
     xhr.send(formData);
