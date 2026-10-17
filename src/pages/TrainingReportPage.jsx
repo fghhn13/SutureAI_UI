@@ -3,6 +3,15 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api, apiUrl } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import {
+  clipTypeLabel,
+  formatDate,
+  formatDateTime,
+  reliabilityLabel,
+  reportStatusLabel,
+  taskName,
+  useI18n,
+} from "../i18n/index.js";
+import {
   AppealBadge,
   AppealForm,
   AppealsPanel,
@@ -32,11 +41,18 @@ function mediaUrl(path) {
   return path.startsWith("/api/") ? apiUrl(path) : publicAssetUrl(path);
 }
 
-function formatRecordedAt(report) {
-  if (!report.recordedAt) return report.dateTime;
-  const d = new Date(report.recordedAt);
-  if (Number.isNaN(d.getTime())) return report.dateTime;
-  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+function formatRecordedAt(report, locale) {
+  return formatDateTime(report.recordedAt, undefined, locale, report.dateTime);
+}
+
+/** Session picker text, built client-side so the task name and date follow the locale. */
+function sessionOptionLabel(t, locale, item) {
+  if (!item.recordedAt) return item.label;
+  return t("report.sessionOption", {
+    task: taskName(t, item.taskName),
+    date: formatDate(item.recordedAt, undefined, locale, ""),
+    score: item.score,
+  });
 }
 
 function defaultExpandedTimelineIds(timeline) {
@@ -71,6 +87,7 @@ function seekSecondsFromClip(clip) {
 }
 
 function StatusBadge({ status }) {
+  const { t } = useI18n();
   const reviewed = status === "Reviewed";
   return (
     <span
@@ -81,7 +98,7 @@ function StatusBadge({ status }) {
       }`}
     >
       {reviewed ? "✓ " : ""}
-      {status}
+      {reportStatusLabel(t, status)}
     </span>
   );
 }
@@ -104,6 +121,7 @@ function ScoreRing({ score }) {
 }
 
 function DimensionCard({ item }) {
+  const { t } = useI18n();
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-soft">
       <div className="flex items-center justify-between">
@@ -112,7 +130,7 @@ function DimensionCard({ item }) {
           className="rounded-md bg-brand-50 px-2 py-1 text-xs font-medium text-brand-700"
           title={item.metrics}
         >
-          Metrics
+          {t("report.metrics")}
         </span>
       </div>
       <div className="mt-3 flex items-center justify-between">
@@ -131,6 +149,7 @@ function DimensionCard({ item }) {
 }
 
 function RadarChart({ dimensions }) {
+  const { t } = useI18n();
   const size = 280;
   const center = size / 2;
   const maxRadius = 92;
@@ -170,10 +189,10 @@ function RadarChart({ dimensions }) {
   return (
     <article className="rounded-xl border border-brand-100 bg-brand-50/60 p-4">
       <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
-        Five-Dimension Radar
+        {t("report.radar.title")}
       </h3>
       <p className="mt-1 text-xs text-slate-600">
-        Auto-generated from current dimension scores.
+        {t("report.radar.subtitle")}
       </p>
       <div className="mt-3 flex justify-center">
         <svg viewBox={`0 0 ${size} ${size}`} className="h-72 w-full max-w-[320px]">
@@ -233,18 +252,13 @@ function RadarChart({ dimensions }) {
 }
 
 function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canAppeal, onUpdated }) {
+  const { t } = useI18n();
   const [appealing, setAppealing] = useState(false);
   const colors = {
     normal: "bg-brand-500",
     warning: "bg-amber-500",
     error: "bg-rose-500",
   };
-  const labels = {
-    normal: "Step",
-    warning: "Warning",
-    error: "Issue",
-  };
-
   return (
     <div className="relative pl-8">
       <span className="absolute left-[7px] top-8 h-full w-px bg-slate-200" />
@@ -263,13 +277,13 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canA
               {event.title}
             </h4>
             {event.overturned ? (
-              <p className="text-xs font-medium text-emerald-700">Overturned after the student's appeal</p>
+              <p className="text-xs font-medium text-emerald-700">{t("report.timelineSection.overturned")}</p>
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {event.appeal ? <AppealBadge status={event.appeal.status} /> : null}
             <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
-              {labels[event.type]}
+              {t(`report.eventType.${event.type}`, { defaultValue: event.type })}
             </span>
             {onSeekToSeconds ? (
               <button
@@ -277,7 +291,7 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canA
                 onClick={() => onSeekToSeconds(seekSecondsFromTimelineEvent(event))}
                 className="rounded-md border border-brand-200 px-3 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50"
               >
-                {event.clip ? "Replay" : "Jump"}
+                {event.clip ? t("report.timelineSection.replay") : t("report.timelineSection.jump")}
               </button>
             ) : (
               event.clip && (
@@ -285,7 +299,7 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canA
                   type="button"
                   className="rounded-md border border-brand-200 px-3 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50"
                 >
-                  View Clip
+                  {t("report.timelineSection.viewClip")}
                 </button>
               )
             )}
@@ -293,7 +307,7 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canA
               onClick={onToggle}
               className="rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
             >
-              {expanded ? "Collapse" : "Expand"}
+              {expanded ? t("report.timelineSection.collapse") : t("report.timelineSection.expand")}
             </button>
             {canAppeal && !appealing ? (
               <button
@@ -301,7 +315,7 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canA
                 onClick={() => setAppealing(true)}
                 className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
               >
-                Appeal
+                {t("report.appeal")}
               </button>
             ) : null}
           </div>
@@ -324,12 +338,13 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canA
 }
 
 function ClipCard({ clip, onReplay }) {
+  const { t } = useI18n();
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-soft">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold text-brand-700">{clip.time}</span>
         <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
-          {clip.type}
+          {clipTypeLabel(t, clip.type)}
         </span>
       </div>
       <h4 className="text-sm font-semibold text-slate-800">{clip.label}</h4>
@@ -340,46 +355,47 @@ function ClipCard({ clip, onReplay }) {
         disabled={!onReplay}
         className="mt-3 w-full rounded-md bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Replay
+        {t("report.timelineSection.replay")}
       </button>
     </article>
   );
 }
 
 function AssessmentHighlightsCard({ highlights }) {
+  const { t, plural } = useI18n();
   const items = [
     {
-      label: "Strongest Dimension",
+      label: t("report.highlights.strongest"),
       value: highlights.strongestDimension,
       valueClassName: "text-brand-700 font-semibold",
     },
     {
-      label: "Main Issue",
+      label: t("report.highlights.mainIssue"),
       value: highlights.mainIssue,
       valueClassName: "text-rose-700 font-semibold",
     },
     {
-      label: "Recommended Focus",
+      label: t("report.highlights.focus"),
       value: highlights.practiceFocus,
       valueClassName: "text-indigo-700 font-semibold",
     },
     {
-      label: "Evidence Clips Available",
-      value: `${highlights.evidenceClipCount} linked segments`,
+      label: t("report.highlights.clips"),
+      value: plural("report.highlights.clipsValue", highlights.evidenceClipCount),
       valueClassName: "text-slate-900 font-semibold",
     },
     {
-      label: "Review Status",
-      value: highlights.reviewStatus,
+      label: t("report.highlights.reviewStatus"),
+      value: reportStatusLabel(t, highlights.reviewStatus),
       valueClassName: "text-amber-700 font-semibold",
     },
   ];
 
   return (
     <article className="surface-card surface-card-lift p-6">
-      <h2 className="text-lg font-semibold text-slate-900">Assessment Highlights</h2>
+      <h2 className="text-lg font-semibold text-slate-900">{t("report.highlights.title")}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Compact summary of the most important report takeaways.
+        {t("report.highlights.subtitle")}
       </p>
       <ul className="mt-4 space-y-3">
         {items.map((item) => (
@@ -398,14 +414,15 @@ function AssessmentHighlightsCard({ highlights }) {
 }
 
 function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
+  const { t } = useI18n();
   return (
     <section className="mt-6 surface-card surface-card-lift p-6">
-      <h2 className="text-lg font-semibold text-slate-900">Report Feedback & Reflection</h2>
+      <h2 className="text-lg font-semibold text-slate-900">{t("report.feedback.titleStudent")}</h2>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
         <article className="rounded-xl border border-brand-100 bg-brand-50/70 p-5 lg:col-span-2">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
-            AI Feedback
+            {t("report.feedback.aiFeedback")}
           </h3>
           <div className="mt-3 rounded-md bg-white/80 px-4 py-3">
             <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
@@ -417,7 +434,7 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <article className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 md:col-span-2">
-              <h4 className="text-sm font-semibold text-emerald-800">Strengths</h4>
+              <h4 className="text-sm font-semibold text-emerald-800">{t("report.feedback.strengths")}</h4>
               <ul className="mt-2 space-y-2 text-sm leading-6 text-emerald-900">
                 {data.strengths.map((item) => (
                   <li key={item} className="rounded-md bg-white/80 px-3 py-2">
@@ -428,7 +445,7 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
             </article>
 
             <article className="rounded-lg border border-rose-200 bg-rose-50/60 p-4">
-              <h4 className="text-sm font-semibold text-rose-800">Areas for Improvement</h4>
+              <h4 className="text-sm font-semibold text-rose-800">{t("report.feedback.improvements")}</h4>
               <ul className="mt-2 space-y-2 text-sm leading-6 text-rose-900">
                 {data.weaknesses.map((item) => (
                   <li key={item} className="rounded-md bg-white/80 px-3 py-2">
@@ -439,7 +456,7 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
             </article>
 
             <article className="rounded-lg border border-brand-200 bg-white/80 p-4">
-              <h4 className="text-sm font-semibold text-brand-700">Recommended Next Steps</h4>
+              <h4 className="text-sm font-semibold text-brand-700">{t("report.feedback.nextSteps")}</h4>
               <ul className="mt-2 space-y-2 text-sm leading-6 text-slate-700">
                 {(data.suggestionDetails ?? data.suggestions.map((text) => ({ text, times: [] }))).map((item) => (
                   <li key={item.text} className="rounded-md bg-brand-50 px-3 py-2">
@@ -467,14 +484,15 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
 }
 
 function InstructorReportFeedbackSection({ data, onUpdated, onSeek }) {
+  const { t } = useI18n();
   return (
     <section className="mt-6 surface-card surface-card-lift p-6">
-      <h2 className="text-lg font-semibold text-slate-900">Report Feedback & Review</h2>
+      <h2 className="text-lg font-semibold text-slate-900">{t("report.feedback.titleInstructor")}</h2>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
         <article className="rounded-xl border border-brand-100 bg-brand-50/70 p-5 lg:col-span-2">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
-            AI Feedback
+            {t("report.feedback.aiFeedback")}
           </h3>
           <div className="mt-3 rounded-md bg-white/80 px-4 py-3">
             <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
@@ -496,10 +514,11 @@ function InstructorReportFeedbackSection({ data, onUpdated, onSeek }) {
 }
 
 function BackLink({ isStaff, report }) {
+  const { t } = useI18n();
   if (!isStaff) {
     return (
       <Link to="/" className="link-brand text-sm font-medium">
-        Student dashboard
+        {t("report.back.student")}
       </Link>
     );
   }
@@ -509,13 +528,14 @@ function BackLink({ isStaff, report }) {
       to={studentId ? `/instructor/students/${studentId}` : "/instructor"}
       className="link-brand text-sm font-medium"
     >
-      ← {studentId ? report.meta.studentName : "Instructor overview"}
+      ← {studentId ? report.meta.studentName : t("report.back.instructorOverview")}
     </Link>
   );
 }
 
 function TrainingReportPage() {
   const { user } = useAuth();
+  const { t, plural, locale } = useI18n();
   const isStaff = user.role !== "student";
   const [searchParams, setSearchParams] = useSearchParams();
   const [catalog, setCatalog] = useState([]);
@@ -549,14 +569,20 @@ function TrainingReportPage() {
     listPath
       .then((path) => (path ? api(path) : []))
       .then((data) => {
-        const items = data.map((item) => ({ id: item.sessionId, label: item.label }));
+        const items = data.map((item) => ({
+          id: item.sessionId,
+          label: item.label,
+          taskName: item.taskName,
+          recordedAt: item.recordedAt,
+          score: item.overallScore,
+        }));
         setCatalog(items);
         const nextId =
           wanted && items.some((item) => item.id === wanted) ? wanted : items[0]?.id ?? "";
         setSelectedId(nextId);
       })
       .catch((err) => {
-        setCatalogError(err instanceof Error ? err.message : "Failed to load catalog");
+        setCatalogError(err instanceof Error ? err.message : t("report.catalogFailedFallback"));
         setCatalog([]);
       })
       .finally(() => setCatalogLoading(false));
@@ -586,7 +612,7 @@ function TrainingReportPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setReportError(err instanceof Error ? err.message : "Failed to load report");
+          setReportError(err instanceof Error ? err.message : t("report.loadFailedFallback"));
         }
       })
       .finally(() => {
@@ -618,7 +644,7 @@ function TrainingReportPage() {
       ? report?.timeline ?? []
       : report.timeline.filter((e) => e.type !== "normal");
 
-  const completionLabel = report?.completed ? "Completed" : "Incomplete";
+  const completionLabel = report?.completed ? t("report.overall.completed") : t("report.overall.incomplete");
   const completionStyles = report?.completed
     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
     : "bg-rose-50 text-rose-700 border-rose-200";
@@ -665,7 +691,7 @@ function TrainingReportPage() {
         <div className="mb-6 text-left">
           <BackLink isStaff={isStaff} report={report} />
         </div>
-        Loading reports…
+        {t("report.loadingReports")}
       </main>
     );
   }
@@ -677,14 +703,14 @@ function TrainingReportPage() {
           <BackLink isStaff={isStaff} report={report} />
         </div>
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
-          <p className="font-semibold">Could not load report catalog</p>
+          <p className="font-semibold">{t("report.catalogFailed")}</p>
           <p className="mt-2 text-sm">{catalogError}</p>
           <button
             type="button"
             onClick={loadCatalog}
             className="mt-4 rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
           >
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       </main>
@@ -698,22 +724,22 @@ function TrainingReportPage() {
           <BackLink isStaff={isStaff} report={report} />
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-slate-700 shadow-soft">
-          <p className="font-semibold text-slate-900">No reports available</p>
+          <p className="font-semibold text-slate-900">{t("report.noReports")}</p>
           {isStaff ? (
             <p className="mt-2 text-sm">
-              Open a report from the{" "}
+              {t("report.noReportsStaff.before")}
               <Link to="/instructor/reviews" className="link-brand">
-                review queue
-              </Link>{" "}
-              or a student's page.
+                {t("report.noReportsStaff.link")}
+              </Link>
+              {t("report.noReportsStaff.after")}
             </p>
           ) : (
             <p className="mt-2 text-sm">
-              You don't have any finished reports yet.{" "}
+              {t("report.noReportsStudent.before")}
               <Link to="/train" className="link-brand">
-                Record a training session
-              </Link>{" "}
-              to get your first one.
+                {t("report.noReportsStudent.link")}
+              </Link>
+              {t("report.noReportsStudent.after")}
             </p>
           )}
         </div>
@@ -731,7 +757,7 @@ function TrainingReportPage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Training session
+                {t("report.trainingSession")}
               </span>
               <select
                 value={selectedId}
@@ -740,7 +766,7 @@ function TrainingReportPage() {
               >
                 {catalog.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.label}
+                    {sessionOptionLabel(t, locale, item)}
                   </option>
                 ))}
               </select>
@@ -749,18 +775,18 @@ function TrainingReportPage() {
         </header>
         {reportError ? (
           <div className="mt-8 rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
-            <p className="font-semibold">Could not load this report</p>
+            <p className="font-semibold">{t("report.loadFailed")}</p>
             <p className="mt-2 text-sm">{reportError}</p>
             <button
               type="button"
               onClick={() => setReportRetryToken((t) => t + 1)}
               className="mt-4 rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
             >
-              Retry
+              {t("common.retry")}
             </button>
           </div>
         ) : (
-          <p className="mt-10 text-center text-slate-600">Loading report…</p>
+          <p className="mt-10 text-center text-slate-600">{t("report.loading")}</p>
         )}
       </main>
     );
@@ -773,20 +799,20 @@ function TrainingReportPage() {
       </div>
       {reportError ? (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <span className="font-semibold">Could not refresh report.</span>{" "}
+          <span className="font-semibold">{t("report.refreshFailed")}</span>{" "}
           <span className="text-amber-900">{reportError}</span>
           <button
             type="button"
             onClick={() => setReportRetryToken((t) => t + 1)}
             className="ml-3 rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
           >
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
       {reportLoading ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-24 text-sm font-medium text-slate-600">
-          Updating report…
+          {t("report.updating")}
         </div>
       ) : null}
 
@@ -803,25 +829,25 @@ function TrainingReportPage() {
         </div>
         <div className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
           <p>
-            <span className="font-medium text-slate-800">Student: </span>
+            <span className="font-medium text-slate-800">{t("report.header.student")}</span>
             {report.student}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Date & Time: </span>
-            {formatRecordedAt(report)}
+            <span className="font-medium text-slate-800">{t("report.header.dateTime")}</span>
+            {formatRecordedAt(report, locale)}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Task Duration: </span>
+            <span className="font-medium text-slate-800">{t("report.header.taskDuration")}</span>
             {report.duration}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Confidence: </span>
-            {report.reliability}
+            <span className="font-medium text-slate-800">{t("report.header.confidence")}</span>
+            {reliabilityLabel(t, report.reliability)}
           </p>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Session
+            {t("report.session")}
             <select
               value={selectedId}
               onChange={(e) => selectReport(e.target.value)}
@@ -829,7 +855,7 @@ function TrainingReportPage() {
             >
               {catalog.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.label}
+                  {sessionOptionLabel(t, locale, item)}
                 </option>
               ))}
             </select>
@@ -844,15 +870,15 @@ function TrainingReportPage() {
             }
             className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Export PDF
+            {t("report.exportPdf")}
           </button>
           {isStaff ? (
             <>
               <span className="hidden sm:inline text-slate-300">|</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">View</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("report.view")}</span>
               {[
-                ["instructor", "Instructor"],
-                ["student", "As student sees it"],
+                ["instructor", t("report.viewModes.instructor")],
+                ["student", t("report.viewModes.student")],
               ].map(([mode, label]) => (
                 <button
                   key={mode}
@@ -876,17 +902,17 @@ function TrainingReportPage() {
 
       <section className="mt-6 grid gap-4 lg:grid-cols-3">
         <article className="surface-card surface-card-lift p-6 lg:col-span-2">
-          <p className="text-sm font-semibold text-slate-500">Overall Performance</p>
+          <p className="text-sm font-semibold text-slate-500">{t("report.overall.title")}</p>
           <div className="mt-4 flex flex-wrap items-center gap-6">
             <ScoreRing score={report.overallScore} />
             <div className="flex-1">
               <div className="grid gap-2 text-sm sm:grid-cols-2">
                 <p>
-                  <span className="font-medium text-slate-800">Reliability: </span>
-                  {report.reliability}
+                  <span className="font-medium text-slate-800">{t("report.overall.reliability")}</span>
+                  {reliabilityLabel(t, report.reliability)}
                 </p>
                 <p>
-                  <span className="font-medium text-slate-800">Change vs Last: </span>
+                  <span className="font-medium text-slate-800">{t("report.overall.change")}</span>
                   <span
                     className={`font-semibold ${
                       String(report.delta).startsWith("-")
@@ -900,24 +926,33 @@ function TrainingReportPage() {
                   </span>
                 </p>
                 <p>
-                  <span className="font-medium text-slate-800">Duration: </span>
+                  <span className="font-medium text-slate-800">{t("report.overall.duration")}</span>
                   {report.duration}
                 </p>
                 <p>
-                  <span className="font-medium text-slate-800">Dimension Avg: </span>
+                  <span className="font-medium text-slate-800">{t("report.overall.dimensionAvg")}</span>
                   {avgDimension}
                 </p>
               </div>
               {report.scores && (report.scores.current !== report.scores.ai || report.scores.confirmedByInstructor) ? (
                 <p className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
-                  <span className="font-semibold">Current score {report.scores.current}</span>
+                  <span className="font-semibold">
+                    {t("report.overall.currentScore", { score: report.scores.current })}
+                  </span>
                   <span className="text-indigo-700">
-                    {" "}
-                    (AI {report.scores.ai}
-                    {report.scores.appealAdjustment
-                      ? `, ${report.scores.appealAdjustment > 0 ? "+" : ""}${report.scores.appealAdjustment} from accepted appeals`
-                      : ""}
-                    {report.scores.confirmedByInstructor ? ", confirmed by your instructor" : ""})
+                    {t("report.overall.details", {
+                      details: [
+                        t("report.overall.aiPart", { score: report.scores.ai }),
+                        report.scores.appealAdjustment
+                          ? t("report.overall.appealPart", {
+                              value: `${report.scores.appealAdjustment > 0 ? "+" : ""}${report.scores.appealAdjustment}`,
+                            })
+                          : null,
+                        report.scores.confirmedByInstructor ? t("report.overall.confirmedPart") : null,
+                      ]
+                        .filter(Boolean)
+                        .join(t("report.overall.detailSeparator")),
+                    })}
                   </span>
                 </p>
               ) : null}
@@ -932,12 +967,14 @@ function TrainingReportPage() {
         </article>
 
         <article className="surface-card surface-card-lift p-6">
-          <h2 className="text-sm font-semibold text-slate-500">Confidence Notice</h2>
+          <h2 className="text-sm font-semibold text-slate-500">{t("report.notice.title")}</h2>
           <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
             {report.uncertainty.map((item, index) => (
               <li key={item} className="rounded-lg bg-slate-50 px-3 py-2">
                 <span className="font-semibold text-amber-700">
-                  {index === 0 ? `${report.reliability}: ` : "Caution: "}
+                  {index === 0
+                    ? t("report.notice.levelPrefix", { level: reliabilityLabel(t, report.reliability) })
+                    : t("report.notice.caution")}
                 </span>
                 <span className="text-slate-700">{item}</span>
               </li>
@@ -958,7 +995,7 @@ function TrainingReportPage() {
       ) : null}
 
       <section className="mt-6">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Dimension Scores</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">{t("report.dimensionScores")}</h2>
         <div className="grid gap-4 lg:grid-cols-3">
           <div>
             <RadarChart dimensions={report.dimensions} />
@@ -975,11 +1012,14 @@ function TrainingReportPage() {
         <article className="surface-card surface-card-lift p-6 xl:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-semibold text-slate-900">Training Timeline</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{t("report.timelineSection.title")}</h2>
               <p className="mt-1 text-sm text-slate-600">
                 {showAllEvents || !flaggedCount
-                  ? `All ${report.timeline.length} detected events.`
-                  : `${flaggedCount} warning${flaggedCount === 1 ? "" : "s"} and issue${flaggedCount === 1 ? "" : "s"}; ${report.timeline.length - flaggedCount} normal steps hidden.`}
+                  ? plural("report.timelineSection.allEvents", report.timeline.length)
+                  : t("report.timelineSection.flaggedSummary", {
+                      flagged: plural("report.timelineSection.flaggedPart", flaggedCount),
+                      hidden: plural("report.timelineSection.hiddenPart", report.timeline.length - flaggedCount),
+                    })}
               </p>
             </div>
             {flaggedCount && flaggedCount < report.timeline.length ? (
@@ -989,7 +1029,9 @@ function TrainingReportPage() {
                 aria-pressed={showAllEvents}
                 className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                {showAllEvents ? "Show issues only" : `Show all ${report.timeline.length} events`}
+                {showAllEvents
+                  ? t("report.timelineSection.showIssuesOnly")
+                  : plural("report.timelineSection.showAll", report.timeline.length)}
               </button>
             ) : null}
           </div>
@@ -1015,7 +1057,7 @@ function TrainingReportPage() {
             </div>
           ) : (
             <p className="mt-3 text-sm text-slate-500">
-              {report.timeline.length} events hidden — expand to review the timeline.
+              {plural("report.timelineSection.collapsed", report.timeline.length)}
             </p>
           )}
         </article>
@@ -1026,11 +1068,11 @@ function TrainingReportPage() {
       </section>
 
       <section className="mt-6 surface-card surface-card-lift p-6">
-        <h2 className="text-lg font-semibold text-slate-900">Evidence Replay · Key Clips</h2>
+        <h2 className="text-lg font-semibold text-slate-900">{t("report.evidenceSection.title")}</h2>
         <p className="mt-1 text-sm text-slate-600">
           {evidenceVideoUrl
-            ? "Use timeline or clip cards to jump to the matching moment in the recording."
-            : "Static preview image for this session."}
+            ? t("report.evidenceSection.hintVideo")
+            : t("report.evidenceSection.hintStatic")}
         </p>
         <div className="mt-4 space-y-4">
           <div>
@@ -1047,12 +1089,12 @@ function TrainingReportPage() {
                   poster={evidenceSrc}
                   src={evidenceVideoUrl}
                 >
-                  Your browser does not support embedded video.
+                  {t("report.evidenceSection.noVideoSupport")}
                 </video>
               ) : (
                 <img
                   src={evidenceSrc}
-                  alt="Evidence replay preview"
+                  alt={t("report.evidenceSection.previewAlt")}
                   className="h-72 md:h-80 lg:h-96 w-full object-contain"
                 />
               )}
