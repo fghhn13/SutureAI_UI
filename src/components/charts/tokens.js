@@ -3,33 +3,33 @@
  * Text never uses series colours; marks carry identity, text uses ink tokens.
  */
 export const CHART = {
-  surface: "#fcfcfb",
-  inkPrimary: "#0b0b0b",
-  inkSecondary: "#52514e",
-  inkMuted: "#898781",
-  grid: "#e1e0d9",
-  axis: "#c3c2b7",
-  series: "#2a78d6", // categorical slot 1 (blue)
-  deEmphasis: "#c3c2b7", // sparkline body; the latest point takes the accent
-  upGood: "#006300",
-  downBad: "#d03b3b",
+  surface: "#ffffff",
+  inkPrimary: "#2b2924",
+  inkSecondary: "#4a463f",
+  inkMuted: "#6f6a60",
+  grid: "#e8e3d8",
+  axis: "#d9d3c6",
+  series: "#4f69c2", // categorical slot 1 (brand blue)
+  deEmphasis: "#d9d3c6", // sparkline body; the latest point takes the accent
+  upGood: "#4a7456",
+  downBad: "#a24e36",
 };
 
 /** Sequential blue ramp (100 → 700) for magnitude, e.g. the score heatmap. */
 export const BLUE_RAMP = [
-  "#cde2fb",
-  "#b7d3f6",
-  "#9ec5f4",
-  "#86b6ef",
-  "#6da7ec",
-  "#5598e7",
-  "#3987e5",
-  "#2a78d6",
-  "#256abf",
-  "#1c5cab",
-  "#184f95",
-  "#104281",
-  "#0d366b",
+  "#e2e8f8",
+  "#d1dbf3",
+  "#beccee",
+  "#a7b8e6",
+  "#8ea3de",
+  "#758cd4",
+  "#546ec4",
+  "#4e67c0",
+  "#445db1",
+  "#3c53a1",
+  "#354a91",
+  "#2e4179",
+  "#26365f",
 ];
 
 /** Map a value in [lo, hi] onto the ramp; returns fill + an ink that clears contrast on it. */

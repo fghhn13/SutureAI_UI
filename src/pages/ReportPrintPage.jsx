@@ -61,7 +61,7 @@ async function captureFrames(url, times) {
       const scale = Math.min(THUMB_W / vw, THUMB_H / vh);
       const w = vw * scale;
       const h = vh * scale;
-      ctx.fillStyle = "#0f172a";
+      ctx.fillStyle = "#2b2924";
       ctx.fillRect(0, 0, THUMB_W, THUMB_H);
       ctx.drawImage(video, (THUMB_W - w) / 2, (THUMB_H - h) / 2, w, h);
       out[t] = canvas.toDataURL("image/jpeg", 0.82);

@@ -30,11 +30,11 @@ function AttentionList({ items }) {
       {items.map((a, i) => (
         <li
           key={`${a.studentId}-${a.kind}-${a.sessionId ?? i}`}
-          className="flex flex-wrap items-start gap-x-3 gap-y-1 rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-2 text-sm"
+          className="flex flex-wrap items-start gap-x-3 gap-y-1 border-b border-line py-2.5 text-sm last:border-0"
         >
           <SeverityBadge severity={a.severity} />
           <div className="min-w-0 flex-1">
-            <Link to={`/instructor/students/${a.studentId}`} className="font-semibold text-slate-900 hover:underline">
+            <Link to={`/instructor/students/${a.studentId}`} className="font-semibold text-ink hover:underline">
               {a.studentName}
             </Link>
             <p className="text-slate-600">{attentionText(t, a)}</p>
@@ -71,7 +71,7 @@ function Roster({ students }) {
     <section className="surface-card mt-6 p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">{t("instructor.overview.studentsTitle")}</h2>
+          <h2 className="section-title">{t("instructor.overview.studentsTitle")}</h2>
           <p className="text-sm text-slate-600">{t("instructor.overview.studentsSubtitle")}</p>
         </div>
         <input
@@ -80,13 +80,13 @@ function Roster({ students }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("instructor.overview.search")}
           aria-label={t("instructor.overview.search")}
-          className="w-56 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          className="field-input w-56 py-2"
         />
       </div>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[860px] text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <tr className="border-b border-mist text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
               {COLUMNS.map((c) => (
                 <th key={c.key} className="pb-3 pr-4" aria-sort={sort.key === c.key ? (sort.dir > 0 ? "ascending" : "descending") : undefined}>
                   {c.sort ? (
@@ -107,9 +107,9 @@ function Roster({ students }) {
           </thead>
           <tbody>
             {rows.map((s) => (
-              <tr key={s.id} className="border-b border-slate-100 hover:bg-brand-50/50">
+              <tr key={s.id} className="border-b border-slate-100 hover:bg-paper">
                 <td className="py-3 pr-4">
-                  <Link to={`/instructor/students/${s.id}`} className="font-semibold text-slate-900 hover:text-brand-700 hover:underline">
+                  <Link to={`/instructor/students/${s.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">
                     {s.name}
                   </Link>
                   <p className="text-xs text-slate-500">{s.email}</p>
@@ -121,7 +121,7 @@ function Roster({ students }) {
                 <td className="py-3 pr-4 tabular-nums text-slate-700">
                   {s.sessions7d} / {s.sessions30d}
                 </td>
-                <td className="py-3 pr-4 text-base font-semibold tabular-nums text-slate-900">{s.latestScore ?? "—"}</td>
+                <td className="py-3 pr-4 text-base font-semibold tabular-nums text-ink">{s.latestScore ?? "—"}</td>
                 <td className="py-3 pr-4">
                   <Sparkline values={s.trend} />
                 </td>
@@ -138,14 +138,14 @@ function Roster({ students }) {
                 <td className="py-3 pr-4 text-slate-700">{dimensionName(t, s.weakestDimension)}</td>
                 <td className="py-3 pr-4">
                   {s.pendingReviews ? (
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                    <span className="chip border-warn/50 py-0.5 text-warn">
                       {t("instructor.counts.reports", { count: s.pendingReviews })}
                     </span>
                   ) : (
                     <span className="text-xs text-slate-400">—</span>
                   )}
                   {s.openAppeals ? (
-                    <span className="ml-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800">
+                    <span className="chip ml-1 border-bad/50 py-0.5 text-bad">
                       {t("instructor.counts.appeals", { count: s.openAppeals })}
                     </span>
                   ) : null}
@@ -214,13 +214,13 @@ export default function InstructorDashboardPage() {
     <InstructorShell>
       {/* Filter row: scopes everything below. */}
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold text-slate-900">{t("instructor.overview.title")}</h1>
+        <h1 className="title-display text-3xl">{t("instructor.overview.title")}</h1>
         <label className="ml-auto flex items-center gap-2 text-sm text-slate-600">
           {t("instructor.overview.cohort")}
           <select
             value={cohortId ?? ""}
             onChange={(e) => setSearchParams({ cohort: e.target.value })}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+            className="field-select py-2"
           >
             {(cohorts ?? []).map((c) => (
               <option key={c.id} value={c.id}>
@@ -270,14 +270,14 @@ export default function InstructorDashboardPage() {
 
           <div className="mt-6 grid gap-6 lg:grid-cols-5">
             <section className="surface-card p-6 lg:col-span-2">
-              <h2 className="text-lg font-semibold text-slate-900">{t("instructor.overview.attentionTitle")}</h2>
+              <h2 className="section-title">{t("instructor.overview.attentionTitle")}</h2>
               <p className="text-sm text-slate-600">
                 {t("instructor.overview.attentionSubtitle")}
               </p>
               <AttentionList items={data.attention} />
             </section>
             <section className="surface-card p-6 lg:col-span-3">
-              <h2 className="text-lg font-semibold text-slate-900">{t("instructor.overview.skillMapTitle")}</h2>
+              <h2 className="section-title">{t("instructor.overview.skillMapTitle")}</h2>
               <p className="text-sm text-slate-600">
                 {t("instructor.overview.skillMapSubtitle")}
               </p>

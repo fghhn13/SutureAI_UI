@@ -42,7 +42,7 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
                       <td
                         key={d}
                         className="h-9 rounded text-center text-xs text-slate-400"
-                        style={{ background: "repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 4px,#fff 4px,#fff 8px)" }}
+                        style={{ background: "repeating-linear-gradient(45deg,#f3f1ec,#f3f1ec 4px,#fff 4px,#fff 8px)" }}
                         title={t("charts.heatmap.noData", { name: row.name, dimension: dimensionName(t, d) })}
                       >
                         —

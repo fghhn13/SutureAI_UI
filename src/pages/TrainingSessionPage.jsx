@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, ScanLine, Upload } from "lucide-react";
 import { api, uploadWithProgress } from "../api/client.js";
 import { TERMINAL_STATUSES } from "../api/sessionStatus.js";
 import LanguageSwitch from "../components/LanguageSwitch.jsx";
 import ProcessingPanel from "../components/ProcessingPanel.jsx";
+import { CountUp, Reveal } from "../components/motion/index.jsx";
 import { durationLabel, statusLabel, taskDescription, taskName, useI18n } from "../i18n/index.js";
 
 const POLL_MS = 1000;
@@ -50,13 +52,14 @@ function TaskPicker({ tasks, selectedId, onSelect, disabled }) {
             disabled={disabled}
             onClick={() => onSelect(task.id)}
             aria-pressed={active}
-            className={`rounded-xl border p-4 text-left transition-all duration-200 disabled:cursor-not-allowed ${
+            className={`relative overflow-hidden rounded-md border p-4 text-left transition-colors duration-200 disabled:cursor-not-allowed ${
               active
-                ? "border-brand-500 bg-brand-50 ring-2 ring-brand-500/20"
-                : "border-slate-200 bg-white hover:border-brand-200 hover:bg-brand-50/40"
+                ? "border-brand-400 bg-brand-50"
+                : "border-line bg-white hover:border-brand-200"
             }`}
           >
-            <p className="font-semibold text-slate-900">{taskName(t, task.id, task.name)}</p>
+            {active ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-brand-500" /> : null}
+            <p className="font-display text-base font-semibold text-brand-800">{taskName(t, task.id, task.name)}</p>
             <p className="mt-1 text-xs text-slate-600">{taskDescription(t, task)}</p>
             <p className="mt-2 text-xs text-slate-500">
               {durationLabel(t, task.estimatedDuration)} ·{" "}
@@ -101,10 +104,15 @@ function VideoDropZone({ file, previewUrl, duration, onFile, disabled }) {
           setDragOver(false);
           if (!disabled) pick(e.dataTransfer.files);
         }}
-        className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors ${
-          dragOver ? "border-brand-500 bg-brand-50" : "border-slate-300 bg-slate-50/60 hover:border-brand-300"
+        className={`flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-md border-[1.5px] border-dashed px-4 py-6 text-center transition-colors ${
+          dragOver ? "border-brand-500 bg-brand-50" : "border-mist bg-paper/60 hover:border-brand-300 hover:bg-brand-50/40"
         } ${disabled ? "pointer-events-none opacity-60" : ""}`}
       >
+        <Upload
+          size={26}
+          strokeWidth={1.5}
+          className={`mb-3 text-brand-500 transition-transform duration-300 ease-smooth ${dragOver ? "-translate-y-1" : ""}`}
+        />
         <p className="text-sm font-semibold text-slate-800">
           {file ? t("train.dropChange") : t("train.dropPrompt")}
         </p>
@@ -127,7 +135,7 @@ function VideoDropZone({ file, previewUrl, duration, onFile, disabled }) {
             src={previewUrl}
             controls
             muted
-            className="aspect-video w-full rounded-lg bg-slate-900 object-contain"
+            className="aspect-video w-full rounded-md bg-slate-900 object-contain"
           />
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
@@ -307,7 +315,7 @@ export default function TrainingSessionPage() {
         <Link to="/" className="link-brand text-sm">
           {t("train.backToDashboard")}
         </Link>
-        <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
+        <div className="mt-6 rounded-md border border-line border-l-2 border-l-bad bg-white p-6 text-ink">
           <p className="font-semibold">{t("train.loadFailedTitle")}</p>
           <p className="mt-2 text-sm">{loadError}</p>
         </div>
@@ -318,15 +326,17 @@ export default function TrainingSessionPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-8">
       <div className="flex items-center justify-between gap-3">
-        <Link to="/" className="link-brand text-sm font-medium">
+        <Link to="/" className="group inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 transition-colors hover:text-brand-700">
+          <ArrowLeft size={15} strokeWidth={2} className="transition-transform duration-300 ease-smooth group-hover:-translate-x-0.5" />
           {t("train.backToDashboard")}
         </Link>
         <LanguageSwitch />
       </div>
 
-      <header className="surface-card mt-4 p-6">
-        <p className="text-sm font-semibold tracking-wide text-brand-700">{t("common.appName")}</p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">
+      <Reveal as="header" y={6} className="surface-card relative mt-4 overflow-hidden p-6 md:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-brand-500" />
+        <p className="pill-header">{t("common.appName")}</p>
+        <h1 className="title-display mt-3 text-3xl">
           {needsUpload
             ? t("train.titleNew")
             : selectedTask
@@ -338,12 +348,12 @@ export default function TrainingSessionPage() {
             ? t("train.introNew")
             : t("train.statusLine", { status: statusLabel(t, session.status) })}
         </p>
-      </header>
+      </Reveal>
 
       {needsUpload ? (
         <>
-          <section className="surface-card mt-6 p-6">
-            <h2 className="text-lg font-semibold text-slate-900">{t("train.stepTask")}</h2>
+          <Reveal as="section" className="surface-card mt-6 p-6">
+            <h2 className="section-title"><span className="section-num">01</span>{t("train.stepTask").replace(/^\d+\.\s*/, "")}</h2>
             <div className="mt-4">
               {tasks.length ? (
                 <TaskPicker
@@ -356,10 +366,10 @@ export default function TrainingSessionPage() {
                 <p className="text-sm text-slate-500">{t("train.loadingTasks")}</p>
               )}
             </div>
-          </section>
+          </Reveal>
 
-          <section className="surface-card mt-6 p-6">
-            <h2 className="text-lg font-semibold text-slate-900">{t("train.stepRecording")}</h2>
+          <Reveal as="section" delay={0.05} className="surface-card mt-6 p-6">
+            <h2 className="section-title"><span className="section-num">02</span>{t("train.stepRecording").replace(/^\d+\.\s*/, "")}</h2>
             <div className="mt-4">
               <VideoDropZone
                 file={file}
@@ -374,18 +384,18 @@ export default function TrainingSessionPage() {
                 </p>
               ) : null}
             </div>
-          </section>
+          </Reveal>
 
-          <section className="surface-card mt-6 p-6">
+          <Reveal as="section" delay={0.1} className="surface-card mt-6 p-6">
             {uploading ? (
               <div>
                 <div className="flex justify-between text-sm">
                   <span className="font-medium text-slate-800">{t("train.uploading")}</span>
                   <span className="tabular-nums text-slate-600">{Math.round(progress * 100)}%</span>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-200">
                   <div
-                    className="h-full rounded-full bg-brand-600 transition-[width] duration-200"
+                    className="h-full rounded-full bg-brand-500 transition-[width] duration-200"
                     style={{ width: `${Math.round(progress * 100)}%` }}
                   />
                 </div>
@@ -403,29 +413,30 @@ export default function TrainingSessionPage() {
                   type="button"
                   disabled={!file || !taskId}
                   onClick={handleUpload}
-                  className="btn-primary"
+                  className="btn-primary inline-flex items-center gap-2"
                 >
+                  <ScanLine size={16} strokeWidth={1.75} />
                   {t("train.uploadAnalyse")}
                 </button>
                 {!file ? <span className="text-sm text-slate-500">{t("train.chooseVideo")}</span> : null}
               </div>
             )}
             {actionError ? (
-              <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900" role="alert">
+              <p className="mt-3 border-l-2 border-bad bg-paper px-3 py-2 text-sm text-bad" role="alert">
                 {actionError}
               </p>
             ) : null}
-          </section>
+          </Reveal>
         </>
       ) : (
-        <section className="surface-card mt-6 p-6">
+        <Reveal as="section" className="surface-card mt-6 p-6 md:p-8">
           <ProcessingPanel session={session} />
 
           {session.status === "ready" ? (
             <div className="mt-6 flex flex-wrap items-center gap-4">
               <p className="text-sm text-slate-700">
                 {t("train.overallScore")}{" "}
-                <span className="text-2xl font-bold text-brand-700">{session.overallScore}</span>
+                <CountUp value={session.overallScore} className="font-display text-3xl font-bold text-brand-700" />
                 <span className="text-slate-500"> {t("common.outOf100")}</span>
                 {autoOpening ? <span className="ml-3 text-slate-500">{t("train.openingReport")}</span> : null}
               </p>
@@ -440,7 +451,7 @@ export default function TrainingSessionPage() {
               </button>
             </div>
           ) : session.status === "failed" ? (
-            <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+            <div className="mt-6 rounded-md border border-line border-l-2 border-l-bad bg-white p-4 text-sm text-ink">
               <p className="font-semibold">{t("train.failedTitle")}</p>
               <p className="mt-1 break-words">{session.error ?? t("train.unknownError")}</p>
               <button type="button" onClick={handleRetry} className="btn-primary mt-3 px-4 py-2">
@@ -464,7 +475,7 @@ export default function TrainingSessionPage() {
               {actionError}
             </p>
           ) : null}
-        </section>
+        </Reveal>
       )}
     </main>
   );

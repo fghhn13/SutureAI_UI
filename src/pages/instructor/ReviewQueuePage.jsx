@@ -50,13 +50,13 @@ export default function ReviewQueuePage() {
   return (
     <InstructorShell>
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold text-slate-900">{t("instructor.queue.title")}</h1>
+        <h1 className="title-display text-3xl">{t("instructor.queue.title")}</h1>
         <label className="ml-auto flex items-center gap-2 text-sm text-slate-600">
           {t("instructor.queue.cohort")}
           <select
             value={cohortId}
             onChange={(e) => update({ cohort: e.target.value })}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+            className="field-select py-2"
           >
             <option value="">{t("instructor.queue.allCohorts")}</option>
             {cohorts.map((c) => (
@@ -76,8 +76,10 @@ export default function ReviewQueuePage() {
             role="tab"
             aria-selected={tab.key === filter}
             onClick={() => update({ filter: tab.key === "pending" ? "" : tab.key })}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-              tab.key === filter ? "bg-brand-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+            className={`rounded-md border px-4 py-2 text-sm font-semibold transition-colors ${
+              tab.key === filter
+                ? "border-brand-500 bg-brand-500 text-white"
+                : "border-line bg-white text-ink-soft hover:border-brand-200 hover:text-brand-700"
             }`}
           >
             {t(`instructor.queue.tabs.${tab.key}`)}
@@ -98,7 +100,7 @@ export default function ReviewQueuePage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[860px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-mist text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
                     <th className="pb-3 pr-4">{t("instructor.queue.columns.student")}</th>
                     <th className="pb-3 pr-4">{t("instructor.queue.columns.task")}</th>
                     <th className="pb-3 pr-4">{t("instructor.queue.columns.recorded")}</th>
@@ -111,9 +113,9 @@ export default function ReviewQueuePage() {
                 </thead>
                 <tbody>
                   {data.items.map((i) => (
-                    <tr key={i.sessionId} className="border-b border-slate-100 hover:bg-brand-50/50">
+                    <tr key={i.sessionId} className="border-b border-slate-100 hover:bg-paper">
                       <td className="py-3 pr-4">
-                        <Link to={`/instructor/students/${i.studentId}`} className="font-semibold text-slate-900 hover:underline">
+                        <Link to={`/instructor/students/${i.studentId}`} className="font-semibold text-ink hover:underline">
                           {i.studentName}
                         </Link>
                         <p className="text-xs text-slate-500">{i.cohortName}</p>

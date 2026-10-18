@@ -1,5 +1,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { AnimatePresence, motion } from "motion/react";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  CalendarClock,
+  ChevronDown,
+  CircleAlert,
+  Clapperboard,
+  Crosshair,
+  Download,
+  Flag,
+  Gauge,
+  Hourglass,
+  Play,
+  ShieldCheck,
+  ShieldPlus,
+  Sparkles,
+  Target,
+  Timer,
+  TriangleAlert,
+  User,
+  Workflow,
+} from "lucide-react";
+import IconBadge from "../components/icons/IconBadge.jsx";
+import { StitchIcon } from "../components/icons/DomainIcons.jsx";
+import SutureLine from "../components/decor/SutureLine.jsx";
+import { CountUp, EASE, GrowBar, Reveal, Stagger, StaggerItem } from "../components/motion/index.jsx";
 import { api, apiUrl } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import LanguageSwitch from "../components/LanguageSwitch.jsx";
@@ -87,64 +114,87 @@ function seekSecondsFromClip(clip) {
   return parseTimeLabelToSeconds(clip.time);
 }
 
+/** "~2 min (includes interrupted segment)" -> "~2 min"; the qualifier goes to a tooltip. */
+function shortDuration(text) {
+  if (!text) return text;
+  return String(text).replace(/\s*[(（][^()（）]*[)）]\s*$/, "") || text;
+}
+
 function StatusBadge({ status }) {
   const { t } = useI18n();
-  const reviewed = status === "Reviewed";
+  // "Reviewed" and "Reviewed by <name>" both count as reviewed.
+  const reviewed = /^Reviewed\b/.test(status ?? "");
+  const Icon = reviewed ? BadgeCheck : Hourglass;
   return (
     <span
-      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-        reviewed
-          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-          : "border-amber-300 bg-amber-50 text-amber-700"
+      title={reportStatusLabel(t, status)}
+      className={`stamp motion-safe:animate-stamp ${
+        reviewed ? "border-good text-good outline-good/50" : "border-warn text-warn outline-warn/50"
       }`}
     >
-      {reviewed ? "✓ " : ""}
-      {reportStatusLabel(t, status)}
+      <Icon size={13} strokeWidth={2} />
+      {reviewed ? t("report.statusBadge.stampReviewed") : t("report.statusBadge.stampPending")}
     </span>
   );
 }
 
+/** Overall score: a gradient arc that sweeps to the score while the number counts up. */
 function ScoreRing({ score }) {
-  const degrees = Math.round((score / 100) * 360);
+  const r = 54;
+  const c = 2 * Math.PI * r;
   return (
-    <div
-      className="flex h-32 w-32 items-center justify-center rounded-full"
-      style={{
-        background: `conic-gradient(#2e7cf6 ${degrees}deg, #dbeafe ${degrees}deg 360deg)`,
-      }}
-    >
-      <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white">
-        <span className="text-3xl font-bold text-brand-700">{score}</span>
-        <span className="text-xs text-slate-500">/100</span>
+    <div className="relative h-36 w-36 shrink-0">
+      <svg viewBox="0 0 128 128" className="relative h-full w-full -rotate-90" aria-hidden="true">
+        <circle cx="64" cy="64" r={r} stroke="#ebe6dc" strokeWidth="7" fill="none" />
+        <motion.circle
+          cx="64"
+          cy="64"
+          r={r}
+          stroke="#4f69c2"
+          strokeWidth="7"
+          strokeLinecap="round"
+          fill="none"
+          strokeDasharray={c}
+          initial={{ strokeDashoffset: c }}
+          animate={{ strokeDashoffset: c * (1 - score / 100) }}
+          transition={{ duration: 1.4, ease: EASE, delay: 0.15 }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <CountUp value={score} duration={1.4} delay={0.15} className="font-display text-4xl font-bold text-brand-800" />
+        <span className="text-xs text-ink-muted">/ 100</span>
       </div>
     </div>
   );
 }
 
-function DimensionCard({ item }) {
+// Report dimensions arrive localized and without keys, always in this order.
+const DIMENSION_ICONS = [Gauge, Crosshair, Workflow, ShieldPlus, StitchIcon];
+
+function DimensionCard({ item, index }) {
   const { t } = useI18n();
+  const Icon = DIMENSION_ICONS[index] ?? Sparkles;
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-soft">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-800">{item.name}</h3>
-        <span
-          className="rounded-md bg-brand-50 px-2 py-1 text-xs font-medium text-brand-700"
-          title={item.metrics}
-        >
+    <article className="surface-card surface-card-lift group h-full p-4">
+      <div className="flex items-center gap-3">
+        <IconBadge icon={Icon} size="sm" />
+        <h3 className="flex-1 font-display text-base font-semibold text-brand-800">{item.name}</h3>
+        <span className="chip border-brand-200 text-brand-600" title={item.metrics}>
           {t("report.metrics")}
         </span>
       </div>
-      <div className="mt-3 flex items-center justify-between">
-        <p className="text-2xl font-bold text-brand-700">{item.score}</p>
-        <p className="text-xs text-slate-500">0 - 100</p>
+      <div className="mt-3 flex items-baseline justify-between">
+        <CountUp value={item.score} delay={0.1 * index} className="font-display text-3xl font-bold text-brand-700" />
+        <p className="text-xs text-ink-muted">0 – 100</p>
       </div>
-      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-        <div
+      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#ebe6dc]">
+        <GrowBar
+          percent={item.score}
+          delay={0.1 * index}
           className="h-full rounded-full bg-brand-500"
-          style={{ width: `${item.score}%` }}
         />
       </div>
-      <p className="mt-3 text-xs leading-5 text-slate-600">{item.explanation}</p>
+      <p className="mt-3 text-xs leading-5 text-ink-muted">{item.explanation}</p>
     </article>
   );
 }
@@ -188,13 +238,9 @@ function RadarChart({ dimensions }) {
     .join(" ");
 
   return (
-    <article className="rounded-xl border border-brand-100 bg-brand-50/60 p-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
-        {t("report.radar.title")}
-      </h3>
-      <p className="mt-1 text-xs text-slate-600">
-        {t("report.radar.subtitle")}
-      </p>
+    <article className="glass-card h-full p-5">
+      <p className="pill-header">{t("report.radar.title")}</p>
+      <p className="mt-2 text-xs text-ink-muted">{t("report.radar.subtitle")}</p>
       <div className="mt-3 flex justify-center">
         <svg viewBox={`0 0 ${size} ${size}`} className="h-72 w-full max-w-[320px]">
           {levelPolygons.map((polygon, index) => (
@@ -202,8 +248,9 @@ function RadarChart({ dimensions }) {
               key={`level-${index}`}
               points={polygon}
               fill="none"
-              stroke="#cbd5e1"
+              stroke="#e3ddd0"
               strokeWidth="1"
+              strokeDasharray={index === levels - 1 ? undefined : "3 3"}
             />
           ))}
           {axisPoints.map((point, index) => (
@@ -213,15 +260,22 @@ function RadarChart({ dimensions }) {
               y1={center}
               x2={point.x}
               y2={point.y}
-              stroke="#cbd5e1"
+              stroke="#e3ddd0"
               strokeWidth="1"
             />
           ))}
-          <polygon
+          {/* Grows out from the centre the first time the chart is seen. */}
+          <motion.polygon
             points={scorePolygon}
-            fill="rgba(46, 124, 246, 0.25)"
-            stroke="#2e7cf6"
-            strokeWidth="2"
+            fill="rgba(79, 105, 194, 0.1)"
+            stroke="#4f69c2"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            style={{ transformOrigin: `${center}px ${center}px`, transformBox: "view-box" }}
+            initial={{ scale: 0, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, ease: EASE }}
           />
           {dimensions.map((dimension, index) => {
             const factor = dimension.score / 100;
@@ -233,13 +287,24 @@ function RadarChart({ dimensions }) {
             const labelY = center + Math.sin(axis.angle) * labelRadius;
             return (
               <g key={`label-${dimension.name}`}>
-                <circle cx={dotX} cy={dotY} r="3" fill="#1e66dc" />
+                <motion.circle
+                  cx={dotX}
+                  cy={dotY}
+                  r="3.5"
+                  fill="#fff"
+                  stroke="#4f69c2"
+                  strokeWidth="1.5"
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.7 + index * 0.08 }}
+                />
                 <text
                   x={labelX}
                   y={labelY}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  className="fill-slate-600 text-[10px]"
+                  className="fill-ink-soft text-[10px] font-medium"
                 >
                   {dimension.name}
                 </text>
@@ -252,76 +317,95 @@ function RadarChart({ dimensions }) {
   );
 }
 
+const EVENT_STYLE = {
+  normal: { dot: "border-brand-300 bg-white", chip: "border-brand-200 text-brand-600" },
+  warning: { dot: "border-warn bg-warn/25", chip: "border-warn/50 text-warn" },
+  error: { dot: "border-bad bg-bad", chip: "border-bad/50 text-bad" },
+};
+
 function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canAppeal, onUpdated }) {
   const { t } = useI18n();
   const [appealing, setAppealing] = useState(false);
-  const colors = {
-    normal: "bg-brand-500",
-    warning: "bg-amber-500",
-    error: "bg-rose-500",
-  };
+  const style = EVENT_STYLE[event.type] ?? EVENT_STYLE.normal;
   return (
-    <div className="relative pl-8">
-      <span className="absolute left-[7px] top-8 h-full w-px bg-slate-200" />
-      <span
-        className={`absolute left-0 top-6 h-4 w-4 rounded-full border-2 border-white ${colors[event.type]}`}
-      />
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-soft">
+    <div className="relative pl-7">
+      <span className="absolute left-[5px] top-9 h-[calc(100%-1.25rem)] w-px bg-line" />
+      <span className={`absolute left-0 top-[1.15rem] h-[11px] w-[11px] rounded-full border-[1.5px] ${style.dot}`} />
+      <div className="rounded-md border border-line bg-white p-4 transition-colors duration-300 hover:border-mist">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-medium text-slate-500">{event.time}</p>
+            <p className="font-mono text-xs font-semibold text-brand-600">{event.time}</p>
             <h4
-              className={`text-sm font-semibold ${
-                event.overturned ? "text-slate-400 line-through" : "text-slate-800"
+              className={`mt-0.5 font-display text-base font-semibold ${
+                event.overturned ? "text-ink-muted line-through" : "text-brand-800"
               }`}
             >
               {event.title}
             </h4>
             {event.overturned ? (
-              <p className="text-xs font-medium text-emerald-700">{t("report.timelineSection.overturned")}</p>
+              <p className="text-xs font-medium text-good">{t("report.timelineSection.overturned")}</p>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {event.appeal ? <AppealBadge status={event.appeal.status} /> : null}
-            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+            <span className={`chip ${style.chip}`}>
               {t(`report.eventType.${event.type}`, { defaultValue: event.type })}
             </span>
             {onSeekToSeconds ? (
               <button
                 type="button"
                 onClick={() => onSeekToSeconds(seekSecondsFromTimelineEvent(event))}
-                className="rounded-md border border-brand-200 px-3 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50"
+                className="btn-ghost"
               >
+                <Play size={12} strokeWidth={2.5} />
                 {event.clip ? t("report.timelineSection.replay") : t("report.timelineSection.jump")}
               </button>
             ) : (
               event.clip && (
-                <button
-                  type="button"
-                  className="rounded-md border border-brand-200 px-3 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50"
-                >
+                <button type="button" className="btn-ghost">
+                  <Clapperboard size={12} strokeWidth={2.25} />
                   {t("report.timelineSection.viewClip")}
                 </button>
               )
             )}
             <button
               onClick={onToggle}
-              className="rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              aria-expanded={expanded}
+              className="inline-flex items-center gap-0.5 text-xs font-semibold text-ink-muted transition-colors hover:text-ink"
             >
               {expanded ? t("report.timelineSection.collapse") : t("report.timelineSection.expand")}
+              <ChevronDown
+                size={13}
+                strokeWidth={2.25}
+                className={`transition-transform duration-300 ease-smooth ${expanded ? "rotate-180" : ""}`}
+              />
             </button>
             {canAppeal && !appealing ? (
               <button
                 type="button"
                 onClick={() => setAppealing(true)}
-                className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+                className="inline-flex items-center gap-1 border-b border-transparent text-xs font-semibold text-warn transition-colors hover:border-current"
               >
+                <Flag size={12} strokeWidth={2.25} />
                 {t("report.appeal")}
               </button>
             ) : null}
           </div>
         </div>
-        {expanded && <p className="mt-3 text-sm text-slate-600">{event.detail}</p>}
+        <AnimatePresence initial={false}>
+          {expanded ? (
+            <motion.div
+              key="detail"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.35, ease: EASE }}
+              className="overflow-hidden"
+            >
+              <p className="pt-3 text-sm leading-6 text-ink-soft">{event.detail}</p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
         {appealing ? (
           <AppealForm
             report={report}
@@ -341,21 +425,22 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canA
 function ClipCard({ clip, onReplay }) {
   const { t } = useI18n();
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-soft">
+    <article className="tile-dashed group flex h-full flex-col transition-colors duration-300 hover:border-solid hover:border-brand-400 hover:bg-white">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold text-brand-700">{clip.time}</span>
-        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
+        <span className="font-mono text-xs font-semibold text-brand-600">{clip.time}</span>
+        <span className="chip border-brand-200 text-brand-600">
           {clipTypeLabel(t, clip.type)}
         </span>
       </div>
-      <h4 className="text-sm font-semibold text-slate-800">{clip.label}</h4>
-      <p className="mt-2 text-xs leading-5 text-slate-600">{clip.description}</p>
+      <h4 className="font-display text-base font-semibold text-brand-800">{clip.label}</h4>
+      <p className="mt-1.5 flex-1 text-xs leading-5 text-ink-muted">{clip.description}</p>
       <button
         type="button"
         onClick={() => onReplay?.()}
         disabled={!onReplay}
-        className="mt-3 w-full rounded-md bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
+        className="btn-primary mt-3 inline-flex w-full items-center justify-center gap-1.5 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
       >
+        <Play size={13} strokeWidth={2.5} className="transition-transform duration-300 group-hover:scale-110" />
         {t("report.timelineSection.replay")}
       </button>
     </article>
@@ -368,99 +453,117 @@ function AssessmentHighlightsCard({ highlights }) {
     {
       label: t("report.highlights.strongest"),
       value: highlights.strongestDimension,
-      valueClassName: "text-brand-700 font-semibold",
+      icon: Sparkles,
+      tone: "brand",
+      valueClassName: "text-brand-700",
     },
     {
       label: t("report.highlights.mainIssue"),
       value: highlights.mainIssue,
-      valueClassName: "text-rose-700 font-semibold",
+      icon: CircleAlert,
+      tone: "rose",
+      valueClassName: "text-bad",
     },
     {
       label: t("report.highlights.focus"),
       value: highlights.practiceFocus,
-      valueClassName: "text-indigo-700 font-semibold",
+      icon: Target,
+      tone: "soft",
+      valueClassName: "text-brand-800",
     },
     {
       label: t("report.highlights.clips"),
       value: plural("report.highlights.clipsValue", highlights.evidenceClipCount),
-      valueClassName: "text-slate-900 font-semibold",
+      icon: Clapperboard,
+      tone: "soft",
+      valueClassName: "text-ink",
     },
     {
       label: t("report.highlights.reviewStatus"),
       value: reportStatusLabel(t, highlights.reviewStatus),
-      valueClassName: "text-amber-700 font-semibold",
+      icon: ShieldCheck,
+      tone: "amber",
+      valueClassName: "text-warn",
     },
   ];
 
   return (
-    <article className="surface-card surface-card-lift p-6">
-      <h2 className="text-lg font-semibold text-slate-900">{t("report.highlights.title")}</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        {t("report.highlights.subtitle")}
-      </p>
-      <ul className="mt-4 space-y-3">
+    <article className="glass-card h-full p-6">
+      <h2 className="section-title">{t("report.highlights.title")}</h2>
+      <p className="mt-1 text-sm text-ink-muted">{t("report.highlights.subtitle")}</p>
+      <Stagger as="ul" className="mt-3">
         {items.map((item) => (
-          <li key={item.label} className="rounded-lg bg-slate-50 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {item.label}
-            </p>
-            <p className={`mt-1 text-sm ${item.valueClassName || "font-medium text-slate-800"}`}>
-              {item.value}
-            </p>
-          </li>
+          <StaggerItem
+            as="li"
+            key={item.label}
+            className="flex items-start gap-3 border-b border-line py-3 last:border-0"
+          >
+            <IconBadge icon={item.icon} tone={item.tone} size="sm" />
+            <div className="min-w-0">
+              <p className="eyebrow">{item.label}</p>
+              <p className={`mt-0.5 text-sm font-semibold ${item.valueClassName}`}>{item.value}</p>
+            </div>
+          </StaggerItem>
         ))}
-      </ul>
+      </Stagger>
     </article>
+  );
+}
+
+function AiFeedbackList({ items }) {
+  return (
+    <ul className="mt-2 text-sm leading-6 text-ink-soft">
+      {items.map((item) => (
+        <li key={item} className="flex gap-2.5 border-b border-brand-100 py-2.5 last:border-0">
+          <Sparkles size={14} strokeWidth={1.5} className="mt-1 shrink-0 text-brand-400" />
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
   const { t } = useI18n();
   return (
-    <section className="mt-6 surface-card surface-card-lift p-6">
-      <h2 className="text-lg font-semibold text-slate-900">{t("report.feedback.titleStudent")}</h2>
+    <Reveal as="section" className="glass-card mt-8 p-6">
+      <h2 className="section-title"><span className="section-num">05</span>{t("report.feedback.titleStudent")}</h2>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        <article className="rounded-xl border border-brand-100 bg-brand-50/70 p-5 lg:col-span-2">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
-            {t("report.feedback.aiFeedback")}
-          </h3>
-          <div className="mt-3 rounded-md bg-white/80 px-4 py-3">
-            <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
-              {data.aiFeedback.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
+        <div className="space-y-4 lg:col-span-2">
+          <article className="tile-blue p-5">
+            <p className="pill-header">{t("report.feedback.aiFeedback")}</p>
+            <AiFeedbackList items={data.aiFeedback} />
+          </article>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <article className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 md:col-span-2">
-              <h4 className="text-sm font-semibold text-emerald-800">{t("report.feedback.strengths")}</h4>
-              <ul className="mt-2 space-y-2 text-sm leading-6 text-emerald-900">
+          <div className="grid gap-4 md:grid-cols-2">
+            <article className="tile md:col-span-2">
+              <h4 className="tile-title is-good">{t("report.feedback.strengths")}</h4>
+              <ul className="mt-2 text-sm leading-6 text-ink-soft">
                 {data.strengths.map((item) => (
-                  <li key={item} className="rounded-md bg-white/80 px-3 py-2">
+                  <li key={item} className="border-b border-[#e4dfd5] py-2 last:border-0">
                     {item}
                   </li>
                 ))}
               </ul>
             </article>
 
-            <article className="rounded-lg border border-rose-200 bg-rose-50/60 p-4">
-              <h4 className="text-sm font-semibold text-rose-800">{t("report.feedback.improvements")}</h4>
-              <ul className="mt-2 space-y-2 text-sm leading-6 text-rose-900">
+            <article className="tile">
+              <h4 className="tile-title is-bad">{t("report.feedback.improvements")}</h4>
+              <ul className="mt-2 text-sm leading-6 text-ink-soft">
                 {data.weaknesses.map((item) => (
-                  <li key={item} className="rounded-md bg-white/80 px-3 py-2">
+                  <li key={item} className="border-b border-[#e4dfd5] py-2 last:border-0">
                     {item}
                   </li>
                 ))}
               </ul>
             </article>
 
-            <article className="rounded-lg border border-brand-200 bg-white/80 p-4">
-              <h4 className="text-sm font-semibold text-brand-700">{t("report.feedback.nextSteps")}</h4>
-              <ul className="mt-2 space-y-2 text-sm leading-6 text-slate-700">
+            <article className="tile-dashed">
+              <h4 className="tile-title">{t("report.feedback.nextSteps")}</h4>
+              <ul className="mt-2 text-sm leading-6 text-ink-soft">
                 {(data.suggestionDetails ?? data.suggestions.map((text) => ({ text, times: [] }))).map((item) => (
-                  <li key={item.text} className="rounded-md bg-brand-50 px-3 py-2">
+                  <li key={item.text} className="border-b border-[#e4dfd5] py-2 last:border-0">
                     {item.text}
                     {item.times?.length ? <TimeChips times={item.times} onSeek={onSeek} className="ml-2" /> : null}
                   </li>
@@ -468,7 +571,7 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
               </ul>
             </article>
           </div>
-        </article>
+        </div>
 
         <div className="space-y-4 lg:col-span-1">
           <ReviewResultCard review={data.review} />
@@ -480,28 +583,20 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
           ) : null}
         </div>
       </div>
-    </section>
+    </Reveal>
   );
 }
 
 function InstructorReportFeedbackSection({ data, onUpdated, onSeek }) {
   const { t } = useI18n();
   return (
-    <section className="mt-6 surface-card surface-card-lift p-6">
-      <h2 className="text-lg font-semibold text-slate-900">{t("report.feedback.titleInstructor")}</h2>
+    <Reveal as="section" className="glass-card mt-8 p-6">
+      <h2 className="section-title"><span className="section-num">05</span>{t("report.feedback.titleInstructor")}</h2>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        <article className="rounded-xl border border-brand-100 bg-brand-50/70 p-5 lg:col-span-2">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-700">
-            {t("report.feedback.aiFeedback")}
-          </h3>
-          <div className="mt-3 rounded-md bg-white/80 px-4 py-3">
-            <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
-              {data.aiFeedback.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
+        <article className="tile-blue p-5 lg:col-span-2">
+          <p className="pill-header">{t("report.feedback.aiFeedback")}</p>
+          <AiFeedbackList items={data.aiFeedback} />
         </article>
 
         <AppealsPanel report={data} onUpdated={onUpdated} onSeek={onSeek} />
@@ -510,27 +605,49 @@ function InstructorReportFeedbackSection({ data, onUpdated, onSeek }) {
       <div className="mt-4">
         <InstructorReviewPanel report={data} onUpdated={onUpdated} />
       </div>
-    </section>
+    </Reveal>
   );
 }
 
 function BackLink({ isStaff, report }) {
   const { t } = useI18n();
+  const className =
+    "group inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 transition-colors hover:text-brand-700";
+  const arrow = (
+    <ArrowLeft size={15} strokeWidth={2.25} className="transition-transform duration-300 ease-smooth group-hover:-translate-x-0.5" />
+  );
   if (!isStaff) {
     return (
-      <Link to="/" className="link-brand text-sm font-medium">
+      <Link to="/" className={className}>
+        {arrow}
         {t("report.back.student")}
       </Link>
     );
   }
   const studentId = report?.meta?.studentId;
   return (
-    <Link
-      to={studentId ? `/instructor/students/${studentId}` : "/instructor"}
-      className="link-brand text-sm font-medium"
-    >
-      ← {studentId ? report.meta.studentName : t("report.back.instructorOverview")}
+    <Link to={studentId ? `/instructor/students/${studentId}` : "/instructor"} className={className}>
+      {arrow}
+      {studentId ? report.meta.studentName : t("report.back.instructorOverview")}
     </Link>
+  );
+}
+
+/** Placeholder with the report's rough shape while it loads. */
+function ReportSkeleton() {
+  return (
+    <div aria-hidden="true" className="space-y-6">
+      <div className="skeleton h-48" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="skeleton h-56 lg:col-span-2" />
+        <div className="skeleton h-56" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="skeleton h-36" />
+        <div className="skeleton h-36" />
+        <div className="skeleton h-36" />
+      </div>
+    </div>
   );
 }
 
@@ -648,8 +765,8 @@ function TrainingReportPage() {
 
   const completionLabel = report?.completed ? t("report.overall.completed") : t("report.overall.incomplete");
   const completionStyles = report?.completed
-    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-    : "bg-rose-50 text-rose-700 border-rose-200";
+    ? "border-good/50 text-good"
+    : "border-bad/50 text-bad";
 
   const toggleTimeline = (id) => {
     setExpanded((prev) => {
@@ -689,11 +806,12 @@ function TrainingReportPage() {
 
   if (catalogLoading) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-16 text-center text-slate-600 md:px-8">
-        <div className="mb-6 text-left">
+      <main className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
+        <div className="mb-4">
           <BackLink isStaff={isStaff} report={report} />
         </div>
-        {t("report.loadingReports")}
+        <p className="sr-only" role="status">{t("report.loadingReports")}</p>
+        <ReportSkeleton />
       </main>
     );
   }
@@ -704,7 +822,7 @@ function TrainingReportPage() {
         <div className="mb-6">
           <BackLink isStaff={isStaff} report={report} />
         </div>
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
+        <div className="rounded-md border border-line border-l-2 border-l-bad bg-white p-6 text-ink">
           <p className="font-semibold">{t("report.catalogFailed")}</p>
           <p className="mt-2 text-sm">{catalogError}</p>
           <button
@@ -725,8 +843,9 @@ function TrainingReportPage() {
         <div className="mb-6">
           <BackLink isStaff={isStaff} report={report} />
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-slate-700 shadow-soft">
-          <p className="font-semibold text-slate-900">{t("report.noReports")}</p>
+        <div className="glass-card p-8 text-ink-soft">
+          <IconBadge icon={StitchIcon} size="lg" className="mb-4" />
+          <p className="font-display text-lg font-semibold text-brand-800">{t("report.noReports")}</p>
           {isStaff ? (
             <p className="mt-2 text-sm">
               {t("report.noReportsStaff.before")}
@@ -755,16 +874,14 @@ function TrainingReportPage() {
         <div className="mb-4">
           <BackLink isStaff={isStaff} report={report} />
         </div>
-        <header className="surface-card surface-card-lift p-6">
+        <header className="glass-card p-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {t("report.trainingSession")}
-              </span>
+              <span className="eyebrow">{t("report.trainingSession")}</span>
               <select
                 value={selectedId}
                 onChange={(e) => selectReport(e.target.value)}
-                className="min-w-[240px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+                className="field-select min-w-[240px] py-2"
               >
                 {catalog.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -776,7 +893,7 @@ function TrainingReportPage() {
           </div>
         </header>
         {reportError ? (
-          <div className="mt-8 rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
+          <div className="mt-8 rounded-md border border-line border-l-2 border-l-bad bg-white p-6 text-ink">
             <p className="font-semibold">{t("report.loadFailed")}</p>
             <p className="mt-2 text-sm">{reportError}</p>
             <button
@@ -788,11 +905,33 @@ function TrainingReportPage() {
             </button>
           </div>
         ) : (
-          <p className="mt-10 text-center text-slate-600">{t("report.loading")}</p>
+          <div className="mt-6">
+            <p className="sr-only" role="status">{t("report.loading")}</p>
+            <ReportSkeleton />
+          </div>
         )}
       </main>
     );
   }
+
+  const headerMeta = [
+    { icon: User, label: t("report.header.student"), value: report.student },
+    { icon: CalendarClock, label: t("report.header.dateTime"), value: formatRecordedAt(report, locale) },
+    { icon: Timer, label: t("report.header.taskDuration"), value: shortDuration(report.duration), title: report.duration },
+    { icon: ShieldCheck, label: t("report.header.confidence"), value: reliabilityLabel(t, report.reliability) },
+  ];
+  const deltaText = String(report.delta);
+  const deltaClass = deltaText.startsWith("-")
+    ? "text-bad"
+    : deltaText.startsWith("+")
+      ? "text-good"
+      : "text-ink-muted";
+  const overallStats = [
+    { label: t("report.overall.reliability"), value: reliabilityLabel(t, report.reliability) },
+    { label: t("report.overall.change"), value: report.delta, className: deltaClass },
+    { label: t("report.overall.duration"), value: shortDuration(report.duration), title: report.duration },
+    { label: t("report.overall.dimensionAvg"), value: avgDimension },
+  ];
 
   return (
     <main className="relative mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
@@ -800,60 +939,69 @@ function TrainingReportPage() {
         <BackLink isStaff={isStaff} report={report} />
       </div>
       {reportError ? (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <div className="mb-4 rounded-md border border-line border-l-2 border-l-warn bg-white px-4 py-3 text-sm text-ink">
           <span className="font-semibold">{t("report.refreshFailed")}</span>{" "}
-          <span className="text-amber-900">{reportError}</span>
+          <span className="text-ink-soft">{reportError}</span>
           <button
             type="button"
             onClick={() => setReportRetryToken((t) => t + 1)}
-            className="ml-3 rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+            className="btn-ghost ml-3"
           >
             {t("common.retry")}
           </button>
         </div>
       ) : null}
-      {reportLoading ? (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-24 text-sm font-medium text-slate-600">
-          {t("report.updating")}
-        </div>
-      ) : null}
+      <AnimatePresence>
+        {reportLoading ? (
+          <motion.div
+            key="updating"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center bg-paper/60 pt-24"
+          >
+            <span className="rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-brand-700 shadow-sheet">
+              {t("report.updating")}
+            </span>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
-      <header className="surface-card surface-card-lift p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* Hero: deck-style title with the stitched-incision ornament on the right. */}
+      <Reveal as="header" y={12} className="glass-card overflow-hidden p-6 md:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 rounded-t-md bg-brand-500" />
+        <SutureLine className="pointer-events-none absolute right-4 top-[5.5rem] hidden w-72 md:block" />
+        <p className="pill-header relative">{report.productName}</p>
+        <div className="relative mt-3 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold tracking-wide text-brand-700">
-              {report.productName}
-            </p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">{report.reportTitle}</h1>
-            <p className="mt-2 text-sm text-slate-600">{report.task}</p>
+            <h1 className="title-display text-3xl md:text-4xl">{report.reportTitle}</h1>
+            <p className="mt-1.5 text-sm font-medium text-ink-muted">{report.task}</p>
           </div>
           <StatusBadge status={report.status} />
         </div>
-        <div className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
-          <p>
-            <span className="font-medium text-slate-800">{t("report.header.student")}</span>
-            {report.student}
-          </p>
-          <p>
-            <span className="font-medium text-slate-800">{t("report.header.dateTime")}</span>
-            {formatRecordedAt(report, locale)}
-          </p>
-          <p>
-            <span className="font-medium text-slate-800">{t("report.header.taskDuration")}</span>
-            {report.duration}
-          </p>
-          <p>
-            <span className="font-medium text-slate-800">{t("report.header.confidence")}</span>
-            {reliabilityLabel(t, report.reliability)}
-          </p>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {t("report.session")}
+        <Stagger className="relative mt-6 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4" delay={0.15}>
+          {headerMeta.map((m) => (
+            <StaggerItem
+              key={m.label}
+              className="flex items-center gap-3 border-t border-line pt-3"
+            >
+              <IconBadge icon={m.icon} tone="soft" size="sm" />
+              <div className="min-w-0">
+                <p className="eyebrow">{m.label.replace(/[:：]\s*$/, "")}</p>
+                <p className="text-sm font-semibold leading-snug text-ink" title={m.title}>
+                  {m.value}
+                </p>
+              </div>
+            </StaggerItem>
+          ))}
+        </Stagger>
+        <div className="relative mt-5 flex flex-wrap items-center gap-3">
+          <label className="flex flex-wrap items-center gap-2">
+            <span className="eyebrow">{t("report.session")}</span>
             <select
               value={selectedId}
               onChange={(e) => selectReport(e.target.value)}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium normal-case text-slate-800"
+              className="field-select"
             >
               {catalog.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -870,79 +1018,75 @@ function TrainingReportPage() {
                 "_blank",
               )
             }
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            className="btn-secondary px-3 py-1.5 text-xs"
           >
+            <Download size={14} strokeWidth={2.25} />
             {t("report.exportPdf")}
           </button>
           <LanguageSwitch />
           {isStaff ? (
-            <>
-              <span className="hidden sm:inline text-slate-300">|</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("report.view")}</span>
-              {[
-                ["instructor", t("report.viewModes.instructor")],
-                ["student", t("report.viewModes.student")],
-              ].map(([mode, label]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setViewMode(mode)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                    viewMode === mode
-                      ? "bg-brand-600 text-white"
-                      : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </>
-          ) : null}
-        </div>
-      </header>
-
-      <FocusCard focus={report.focus} onSeek={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined} />
-
-      <section className="mt-6 grid gap-4 lg:grid-cols-3">
-        <article className="surface-card surface-card-lift p-6 lg:col-span-2">
-          <p className="text-sm font-semibold text-slate-500">{t("report.overall.title")}</p>
-          <div className="mt-4 flex flex-wrap items-center gap-6">
-            <ScoreRing score={report.overallScore} />
-            <div className="flex-1">
-              <div className="grid gap-2 text-sm sm:grid-cols-2">
-                <p>
-                  <span className="font-medium text-slate-800">{t("report.overall.reliability")}</span>
-                  {reliabilityLabel(t, report.reliability)}
-                </p>
-                <p>
-                  <span className="font-medium text-slate-800">{t("report.overall.change")}</span>
-                  <span
-                    className={`font-semibold ${
-                      String(report.delta).startsWith("-")
-                        ? "text-rose-600"
-                        : String(report.delta).startsWith("+")
-                          ? "text-emerald-600"
-                          : "text-slate-600"
+            <div className="flex items-center gap-2">
+              <span className="eyebrow">{t("report.view")}</span>
+              {/* Segmented control; the active pill slides between options. */}
+              <div className="relative flex rounded-md border border-line bg-paper p-0.5">
+                {[
+                  ["instructor", t("report.viewModes.instructor")],
+                  ["student", t("report.viewModes.student")],
+                ].map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setViewMode(mode)}
+                    aria-pressed={viewMode === mode}
+                    className={`relative rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                      viewMode === mode ? "text-white" : "text-ink-soft hover:text-brand-700"
                     }`}
                   >
-                    {report.delta}
-                  </span>
-                </p>
-                <p>
-                  <span className="font-medium text-slate-800">{t("report.overall.duration")}</span>
-                  {report.duration}
-                </p>
-                <p>
-                  <span className="font-medium text-slate-800">{t("report.overall.dimensionAvg")}</span>
-                  {avgDimension}
-                </p>
+                    {viewMode === mode ? (
+                      <motion.span
+                        layoutId="view-mode-pill"
+                        className="absolute inset-0 rounded bg-brand-500"
+                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      />
+                    ) : null}
+                    <span className="relative">{label}</span>
+                  </button>
+                ))}
               </div>
+            </div>
+          ) : null}
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.05}>
+        <FocusCard focus={report.focus} onSeek={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined} />
+      </Reveal>
+
+      <Stagger as="section" className="mt-6 grid gap-4 lg:grid-cols-3" delay={0.1}>
+        <StaggerItem as="article" className="glass-card p-6 lg:col-span-2">
+          <p className="pill-header"><span className="section-num">01</span>{t("report.overall.title")}</p>
+          <div className="mt-5 flex flex-wrap items-center gap-8">
+            <ScoreRing score={report.overallScore} />
+            <div className="min-w-[16rem] flex-1">
+              <ul className="grid gap-x-8 sm:grid-cols-2">
+                {overallStats.map((s) => (
+                  <li key={s.label} className="leader">
+                    <span className="text-ink-muted">{s.label.replace(/[:：]\s*$/, "")}</span>
+                    <span
+                      className={`font-display text-base font-semibold ${s.className ?? "text-brand-800"}`}
+                      title={s.title}
+                    >
+                      {s.value}
+                    </span>
+                  </li>
+                ))}
+              </ul>
               {report.scores && (report.scores.current !== report.scores.ai || report.scores.confirmedByInstructor) ? (
-                <p className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
+                <p className="tile-blue mt-3 px-3 py-2 text-sm text-brand-800">
                   <span className="font-semibold">
                     {t("report.overall.currentScore", { score: report.scores.current })}
                   </span>
-                  <span className="text-indigo-700">
+                  <span className="text-brand-700">
                     {t("report.overall.details", {
                       details: [
                         t("report.overall.aiPart", { score: report.scores.ai }),
@@ -959,64 +1103,71 @@ function TrainingReportPage() {
                   </span>
                 </p>
               ) : null}
-              <span
-                className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${completionStyles}`}
-              >
+              <span className={`chip mt-3 ${completionStyles}`}>
+                {report.completed ? <BadgeCheck size={13} strokeWidth={2.25} /> : <CircleAlert size={13} strokeWidth={2.25} />}
                 {completionLabel}
               </span>
-              <p className="mt-3 text-sm leading-6 text-slate-700">{report.summary}</p>
+              <p className="mt-3 text-sm leading-6 text-ink-soft">{report.summary}</p>
             </div>
           </div>
-        </article>
+        </StaggerItem>
 
-        <article className="surface-card surface-card-lift p-6">
-          <h2 className="text-sm font-semibold text-slate-500">{t("report.notice.title")}</h2>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+        <StaggerItem as="article" className="glass-card p-6">
+          <p className="pill-header">{t("report.notice.title")}</p>
+          <ul className="mt-4 space-y-3 text-sm leading-6">
             {report.uncertainty.map((item, index) => (
-              <li key={item} className="rounded-lg bg-slate-50 px-3 py-2">
-                <span className="font-semibold text-amber-700">
-                  {index === 0
-                    ? t("report.notice.levelPrefix", { level: reliabilityLabel(t, report.reliability) })
-                    : t("report.notice.caution")}
+              <li
+                key={item}
+                className="tile flex gap-3 px-3 py-2.5"
+              >
+                <TriangleAlert size={15} strokeWidth={1.75} className="mt-1 shrink-0 text-warn" />
+                <span>
+                  <span className="font-semibold text-amber-700">
+                    {index === 0
+                      ? t("report.notice.levelPrefix", { level: reliabilityLabel(t, report.reliability) })
+                      : t("report.notice.caution")}
+                  </span>
+                  <span className="text-ink-soft">{item}</span>
                 </span>
-                <span className="text-slate-700">{item}</span>
               </li>
             ))}
           </ul>
-        </article>
-      </section>
+        </StaggerItem>
+      </Stagger>
 
       {report.pointsLost?.length || report.changes?.length || report.keyMetrics?.length ? (
-        <section className="mt-6 grid gap-4 lg:grid-cols-2">
+        <Reveal as="section" className="mt-6 grid gap-4 lg:grid-cols-2">
           <PointsLostCard
             items={report.pointsLost}
             total={100 - report.overallScore}
             onSeek={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined}
           />
           <ProgressCard changes={report.changes} metrics={report.keyMetrics} />
-        </section>
+        </Reveal>
       ) : null}
 
-      <section className="mt-6">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">{t("report.dimensionScores")}</h2>
+      <section className="mt-8">
+        <h2 className="section-title mb-4"><span className="section-num">02</span>{t("report.dimensionScores")}</h2>
         <div className="grid gap-4 lg:grid-cols-3">
-          <div>
+          <Reveal>
             <RadarChart dimensions={report.dimensions} />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2 xl:grid-cols-3">
-            {report.dimensions.map((item) => (
-              <DimensionCard key={item.name} item={item} />
+          </Reveal>
+          <Stagger className="grid gap-4 sm:grid-cols-2 lg:col-span-2 xl:grid-cols-3">
+            {report.dimensions.map((item, index) => (
+              <StaggerItem key={item.name}>
+                <DimensionCard item={item} index={index} />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </div>
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-3">
-        <article className="surface-card surface-card-lift p-6 xl:col-span-2">
+      <section className="mt-8 grid gap-6 xl:grid-cols-3">
+        <Reveal as="article" className="glass-card p-6 xl:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-semibold text-slate-900">{t("report.timelineSection.title")}</h2>
-              <p className="mt-1 text-sm text-slate-600">
+              <h2 className="section-title"><span className="section-num">03</span>{t("report.timelineSection.title")}</h2>
+              <p className="mt-1 text-sm text-ink-muted">
                 {showAllEvents || !flaggedCount
                   ? plural("report.timelineSection.allEvents", report.timeline.length)
                   : t("report.timelineSection.flaggedSummary", {
@@ -1030,7 +1181,7 @@ function TrainingReportPage() {
                 type="button"
                 onClick={() => setShowAllEvents((v) => !v)}
                 aria-pressed={showAllEvents}
-                className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                className="btn-secondary shrink-0 px-3 py-1.5 text-xs"
               >
                 {showAllEvents
                   ? t("report.timelineSection.showIssuesOnly")
@@ -1039,47 +1190,57 @@ function TrainingReportPage() {
             ) : null}
           </div>
           {timelineSectionOpen ? (
-            <div className="mt-4 space-y-4">
-              {visibleTimeline.map((event) => (
-                <TimelineItem
-                  key={event.id}
-                  event={event}
-                  expanded={expanded.has(event.id)}
-                  onToggle={() => toggleTimeline(event.id)}
-                  onSeekToSeconds={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined}
-                  report={report}
-                  canAppeal={
-                    Boolean(report.meta?.canRespond) &&
-                    (event.type === "warning" || event.type === "error") &&
-                    !event.appeal &&
-                    (report.appeals?.length ?? 0) < (report.meta?.maxAppeals ?? 5)
-                  }
-                  onUpdated={setReport}
-                />
-              ))}
-            </div>
+            <motion.div layout className="mt-5 space-y-4">
+              <AnimatePresence initial={false}>
+                {visibleTimeline.map((event) => (
+                  <motion.div
+                    key={event.id}
+                    layout
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.35, ease: EASE }}
+                  >
+                    <TimelineItem
+                      event={event}
+                      expanded={expanded.has(event.id)}
+                      onToggle={() => toggleTimeline(event.id)}
+                      onSeekToSeconds={evidenceVideoUrl ? seekEvidenceVideoToSeconds : undefined}
+                      report={report}
+                      canAppeal={
+                        Boolean(report.meta?.canRespond) &&
+                        (event.type === "warning" || event.type === "error") &&
+                        !event.appeal &&
+                        (report.appeals?.length ?? 0) < (report.meta?.maxAppeals ?? 5)
+                      }
+                      onUpdated={setReport}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
           ) : (
-            <p className="mt-3 text-sm text-slate-500">
+            <p className="mt-3 text-sm text-ink-muted">
               {plural("report.timelineSection.collapsed", report.timeline.length)}
             </p>
           )}
-        </article>
+        </Reveal>
 
-        <aside className="space-y-6">
+        <Reveal as="aside" delay={0.1} className="space-y-6">
           <AssessmentHighlightsCard highlights={report.assessmentHighlights} />
-        </aside>
+        </Reveal>
       </section>
 
-      <section className="mt-6 surface-card surface-card-lift p-6">
-        <h2 className="text-lg font-semibold text-slate-900">{t("report.evidenceSection.title")}</h2>
-        <p className="mt-1 text-sm text-slate-600">
+      <Reveal as="section" className="glass-card mt-8 p-6">
+        <h2 className="section-title"><span className="section-num">04</span>{t("report.evidenceSection.title")}</h2>
+        <p className="mt-1 text-sm text-ink-muted">
           {evidenceVideoUrl
             ? t("report.evidenceSection.hintVideo")
             : t("report.evidenceSection.hintStatic")}
         </p>
         <div className="mt-4 space-y-4">
           <div>
-            <div className="overflow-hidden rounded-xl border border-brand-200 bg-slate-100">
+            <div className="overflow-hidden rounded-md bg-ink ring-1 ring-line">
               {evidenceVideoUrl ? (
                 <video
                   key={selectedId}
@@ -1098,7 +1259,7 @@ function TrainingReportPage() {
                 <img
                   src={evidenceSrc}
                   alt={t("report.evidenceSection.previewAlt")}
-                  className="h-72 md:h-80 lg:h-96 w-full object-contain"
+                  className="h-72 w-full bg-brand-50 object-contain md:h-80 lg:h-96"
                 />
               )}
             </div>
@@ -1110,21 +1271,22 @@ function TrainingReportPage() {
               />
             ) : null}
           </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Stagger className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {report.clips.map((clip) => (
-              <ClipCard
-                key={clip.id}
-                clip={clip}
-                onReplay={
-                  evidenceVideoUrl
-                    ? () => seekEvidenceVideoToSeconds(seekSecondsFromClip(clip))
-                    : undefined
-                }
-              />
+              <StaggerItem key={clip.id}>
+                <ClipCard
+                  clip={clip}
+                  onReplay={
+                    evidenceVideoUrl
+                      ? () => seekEvidenceVideoToSeconds(seekSecondsFromClip(clip))
+                      : undefined
+                  }
+                />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </div>
-      </section>
+      </Reveal>
 
       {isStaff && viewMode === "instructor" ? (
         <InstructorReportFeedbackSection

@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { Circle, CircleDot, LogOut, TriangleAlert } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import DevUserSwitch from "../../components/DevUserSwitch";
 import LanguageSwitch from "../../components/LanguageSwitch.jsx";
@@ -27,19 +28,24 @@ export function InstructorShell({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
+  // Active tab: blue text with a blue rule under it, like a ledger tab.
   const navCls = ({ isActive }) =>
-    `rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
-      isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100"
+    `relative py-3 text-sm font-semibold transition-colors after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:transition-colors ${
+      isActive ? "text-brand-700 after:bg-brand-500" : "text-ink-muted after:bg-transparent hover:text-ink"
     }`;
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 md:px-8">
-          <p className="text-sm font-semibold tracking-wide text-brand-700">
-            {t("common.appName")} <span className="font-normal text-slate-400">· {t("instructor.shell.role")}</span>
+      <header className="border-b border-line bg-white">
+        <div aria-hidden="true" className="h-1 bg-brand-500" />
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-1 px-4 md:px-8">
+          <p className="py-3 font-display text-lg font-bold tracking-tight text-brand-800">
+            {t("common.appName")}{" "}
+            <span className="ml-1 font-sans text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
+              {t("instructor.shell.role")}
+            </span>
           </p>
-          <nav className="flex gap-1" aria-label={t("instructor.shell.nav")}>
+          <nav className="flex gap-6" aria-label={t("instructor.shell.nav")}>
             <NavLink to="/instructor" end className={navCls}>
               {t("instructor.shell.overview")}
             </NavLink>
@@ -47,85 +53,78 @@ export function InstructorShell({ children }) {
               {t("instructor.shell.reviewQueue")}
             </NavLink>
           </nav>
-          <div className="ml-auto flex items-center gap-3 text-sm">
+          <div className="ml-auto flex items-center gap-4 py-2 text-sm">
             <LanguageSwitch />
-            <span className="text-slate-600">{user.displayName}</span>
+            <span className="text-ink-muted">{user.displayName}</span>
             <button
               type="button"
               onClick={async () => {
                 await logout();
                 navigate("/login", { replace: true });
               }}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50"
+              className="btn-ghost text-sm"
             >
+              <LogOut size={14} strokeWidth={1.75} />
               {t("common.logOut")}
             </button>
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-6 md:px-8">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-6 motion-safe:animate-fade-in-up-fast md:px-8 md:py-8">{children}</main>
       <DevUserSwitch />
     </div>
   );
 }
 
 const SEVERITY = {
-  high: { icon: "▲", cls: "border-rose-200 bg-rose-50 text-rose-800" },
-  medium: { icon: "●", cls: "border-amber-200 bg-amber-50 text-amber-900" },
-  low: { icon: "○", cls: "border-slate-200 bg-slate-50 text-slate-700" },
+  high: { icon: TriangleAlert, cls: "border-bad/50 text-bad" },
+  medium: { icon: CircleDot, cls: "border-warn/50 text-warn" },
+  low: { icon: Circle, cls: "border-mist text-ink-muted" },
 };
 
 /** Severity chip: icon + label, never colour alone. */
 export function SeverityBadge({ severity }) {
   const { t } = useI18n();
   const level = SEVERITY[severity] ? severity : "low";
-  const s = SEVERITY[level];
+  const { icon: Icon, cls } = SEVERITY[level];
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${s.cls}`}>
-      <span aria-hidden>{s.icon}</span>
+    <span className={`chip shrink-0 py-0.5 ${cls}`}>
+      <Icon size={11} strokeWidth={2.25} aria-hidden />
       {t(`instructor.severity.${level}`)}
     </span>
   );
 }
 
 const REVIEW_STATE = {
-  none: "bg-amber-50 text-amber-900 border-amber-200",
-  draft: "bg-slate-50 text-slate-700 border-slate-300",
-  completed: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  none: "border-warn/50 text-warn",
+  draft: "border-mist text-ink-muted",
+  completed: "border-good/50 text-good",
 };
 
 export function ReviewStateBadge({ state }) {
   const { t } = useI18n();
   const key = REVIEW_STATE[state] ? state : "none";
-  return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${REVIEW_STATE[key]}`}>
-      {t(`instructor.reviewState.${key}`)}
-    </span>
-  );
+  return <span className={`chip py-0.5 ${REVIEW_STATE[key]}`}>{t(`instructor.reviewState.${key}`)}</span>;
 }
 
 const FEEDBACK_STATE = {
-  accepted: "bg-emerald-50 text-emerald-800 border-emerald-200",
-  appeal_open: "bg-rose-50 text-rose-800 border-rose-200",
-  appeal_decided: "bg-slate-50 text-slate-700 border-slate-300",
+  accepted: "border-good/50 text-good",
+  appeal_open: "border-bad/50 text-bad",
+  appeal_decided: "border-mist text-ink-muted",
 };
 
 export function FeedbackStateBadge({ state }) {
   const { t } = useI18n();
   if (!state || !FEEDBACK_STATE[state]) return <span className="text-xs text-slate-400">—</span>;
-  return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${FEEDBACK_STATE[state]}`}>
-      {t(`instructor.feedbackState.${state}`)}
-    </span>
-  );
+  return <span className={`chip py-0.5 ${FEEDBACK_STATE[state]}`}>{t(`instructor.feedbackState.${state}`)}</span>;
 }
 
 export function LoadError({ message, onRetry }) {
   const { t } = useI18n();
   return (
-    <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900">
+    <div className="rounded-md border border-line border-l-2 border-l-bad bg-white p-6 text-ink">
       <p className="font-semibold">{t("common.couldNotLoadPage")}</p>
-      <p className="mt-2 text-sm">{message}</p>
+      <p className="mt-2 text-sm text-ink-soft">{message}</p>
       {onRetry ? (
         <button type="button" onClick={onRetry} className="btn-primary mt-4 px-4 py-2 text-sm">
           {t("common.retry")}

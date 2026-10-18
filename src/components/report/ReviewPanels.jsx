@@ -70,7 +70,7 @@ function FocusChips({ value, onChange, suggestions }) {
           }}
           onBlur={() => draft && add(draft)}
           placeholder={tr("report.review.focusPlaceholder")}
-          className="min-w-[160px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1 text-sm"
+          className="min-w-[160px] flex-1 field-input py-1 text-sm"
         />
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
@@ -138,9 +138,9 @@ export function InstructorReviewPanel({ report, onUpdated }) {
     .filter((s, i, a) => a.indexOf(s) === i);
 
   return (
-    <article className="rounded-xl border border-indigo-100 bg-white p-5">
+    <article className="rounded-md border border-line bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">{t("report.instructorReview")}</h3>
+        <h3 className="pill-header">{t("report.instructorReview")}</h3>
         <span className="text-xs text-slate-500">
           {completed
             ? t("report.review.sentBy", { date: fmt(review.completedAt), name: review.instructorName })
@@ -151,7 +151,7 @@ export function InstructorReviewPanel({ report, onUpdated }) {
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-lg bg-slate-50 px-3 py-2">
+        <div className="rounded-md bg-paper px-3 py-2">
           <p className="text-xs text-slate-500">{t("report.aiScore")}</p>
           <p className="text-2xl font-semibold text-slate-900">{ai}</p>
         </div>
@@ -163,10 +163,10 @@ export function InstructorReviewPanel({ report, onUpdated }) {
             max={100}
             value={Number.isNaN(finalScore) ? "" : finalScore}
             onChange={(e) => setFinalScore(e.target.value === "" ? NaN : Number(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-lg font-semibold"
+            className="mt-1 w-full field-input py-2 text-lg font-semibold"
           />
         </label>
-        <div className="rounded-lg bg-slate-50 px-3 py-2">
+        <div className="rounded-md bg-paper px-3 py-2">
           <p className="text-xs text-slate-500">{t("report.review.alignment")}</p>
           <p className="mt-1 text-sm font-semibold text-slate-800">
             {scoreValid ? t(`report.review.alignmentValues.${alignmentOf(ai, finalScore)}`) : "—"}
@@ -180,7 +180,7 @@ export function InstructorReviewPanel({ report, onUpdated }) {
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder={t("report.review.commentPlaceholder")}
-          className="mt-1 h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          className="mt-1 h-28 w-full resize-y field-input py-2 text-sm"
         />
       </label>
 
@@ -267,7 +267,7 @@ export function AppealForm({ report, eventId, onUpdated, onCancel }) {
   }
 
   return (
-    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm">
+    <div className="mt-3 border-l-2 border-warn bg-paper p-3 text-sm">
       <p className="font-semibold text-slate-800">
         {eventId ? t("report.appealFinding") : t("report.appeals.appealWhole")}
       </p>
@@ -293,7 +293,7 @@ export function AppealForm({ report, eventId, onUpdated, onCancel }) {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder={t("report.appeals.formPlaceholder")}
-        className="mt-2 h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2"
+        className="mt-2 h-20 w-full resize-y field-input py-2"
       />
       <div className="mt-2 flex gap-2">
         <button type="button" disabled={busy || !message.trim()} onClick={submit} className="btn-primary px-4 py-1.5">
@@ -318,8 +318,8 @@ export function AppealsPanel({ report, onUpdated, onSeek }) {
   const fb = report.feedback;
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">{t("report.appeals.panelTitle")}</h3>
+    <article className="tile p-5">
+      <h3 className="pill-header">{t("report.appeals.panelTitle")}</h3>
       {fb?.kind === "accept" ? (
         <p className="mt-3 text-sm text-slate-700">
           <span className="font-semibold text-emerald-700">{t("report.appeals.acceptedBadge")}</span>
@@ -358,7 +358,7 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
   }
 
   return (
-    <li className="rounded-lg border border-slate-200 p-3 text-sm">
+    <li className="rounded-md border border-line p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         {a.eventTime != null && onSeek ? (
           <button
@@ -412,7 +412,7 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder={t("report.appeals.decisionPlaceholder")}
-            className="h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2"
+            className="h-20 w-full resize-y field-input py-2"
           />
           <button
             type="button"
@@ -424,8 +424,8 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
           </button>
         </div>
       ) : (
-        <div className="mt-2 rounded-md bg-indigo-50 px-3 py-2">
-          <p className="text-xs text-indigo-700">
+        <div className="mt-2 rounded-md bg-brand-50 px-3 py-2">
+          <p className="text-xs text-brand-700">
             {a.decidedBy} · {fmt(a.decidedAt)}
           </p>
           <p className="mt-1 text-slate-800">{a.decisionNote}</p>
@@ -441,8 +441,8 @@ export function ReviewResultCard({ review }) {
   const { t } = useI18n();
   const fmt = useFmt();
   return (
-    <article className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">{t("report.evaluation.title")}</h3>
+    <article className="tile-blue p-5">
+      <h3 className="pill-header">{t("report.evaluation.title")}</h3>
       {review ? (
         <div className="mt-3 space-y-2 text-sm text-slate-700">
           <p>
@@ -456,7 +456,7 @@ export function ReviewResultCard({ review }) {
               <span className="text-slate-500">{t("report.evaluation.aiSuffix", { score: review.aiScore })}</span>
             ) : null}
           </p>
-          {review.comment ? <p className="rounded-lg bg-white px-3 py-2 leading-6">{review.comment}</p> : null}
+          {review.comment ? <p className="border-b border-brand-100 py-2 leading-6 last:border-0">{review.comment}</p> : null}
           {review.teachingFocus?.length ? (
             <div className="flex flex-wrap gap-1.5">
               {review.teachingFocus.map((f) => (
@@ -499,8 +499,8 @@ export function StudentResponseCard({ report, onUpdated }) {
   }
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-slate-50/80 p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">{t("report.response.title")}</h3>
+    <article className="tile p-5">
+      <h3 className="pill-header">{t("report.response.title")}</h3>
 
       {fb?.kind === "accept" ? (
         <p className="mt-3 text-sm">
@@ -518,7 +518,7 @@ export function StudentResponseCard({ report, onUpdated }) {
       {appeals.length ? (
         <ul className="mt-3 space-y-2">
           {appeals.map((a) => (
-            <li key={a.id} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+            <li key={a.id} className="rounded-md border border-line bg-white p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 {a.eventTime != null ? (
                   <span className="text-xs font-semibold text-brand-700">{clock(a.eventTime)}</span>
@@ -532,8 +532,8 @@ export function StudentResponseCard({ report, onUpdated }) {
                   {t("report.response.withdraw")}
                 </button>
               ) : (
-                <div className="mt-2 rounded-md bg-indigo-50 px-3 py-2">
-                  <p className="text-xs text-indigo-700">
+                <div className="mt-2 rounded-md bg-brand-50 px-3 py-2">
+                  <p className="text-xs text-brand-700">
                     {a.decidedBy} · {fmt(a.decidedAt)}
                   </p>
                   <p className="mt-1 text-slate-800">{a.decisionNote}</p>
@@ -600,8 +600,8 @@ export function PersonalNoteCard({ report, onUpdated }) {
   }
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-slate-50/80 p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">{t("report.personalNote")}</h3>
+    <article className="tile-dashed p-5">
+      <h3 className="pill-header">{t("report.personalNote")}</h3>
       <p className="mt-1 text-xs text-slate-500">{t("report.note.private")}</p>
       <textarea
         value={note}
@@ -610,7 +610,7 @@ export function PersonalNoteCard({ report, onUpdated }) {
           setSaved(false);
         }}
         placeholder={t("report.note.placeholder")}
-        className="mt-3 h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+        className="mt-3 h-28 w-full resize-y field-input py-2 text-sm"
       />
       <div className="mt-2 flex items-center gap-3">
         <button type="button" disabled={busy || saved} onClick={save} className="btn-secondary px-4 py-1.5">

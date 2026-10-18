@@ -4,13 +4,15 @@ import { DEMO_ACCOUNTS, DEMO_PASSWORD, homePathFor } from "../auth/demoAccounts.
 import { useAuth } from "../auth/AuthContext.jsx";
 import { ApiError } from "../api/client.js";
 import LanguageSwitch from "../components/LanguageSwitch.jsx";
+import SutureLine from "../components/decor/SutureLine.jsx";
+import { Reveal, Stagger, StaggerItem } from "../components/motion/index.jsx";
 import { useI18n } from "../i18n/index.js";
 
 export default function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useI18n();
+  const { t, tRaw } = useI18n();
   const fromLoc = location.state?.from;
   const from = fromLoc ? `${fromLoc.pathname}${fromLoc.search ?? ""}` : null;
 
@@ -40,34 +42,36 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-slate-100 via-white to-brand-50/50">
-      <div
-        className="pointer-events-none absolute -left-32 top-0 h-80 w-80 rounded-full bg-brand-300/30 blur-3xl"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-brand-400/20 blur-3xl"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-brand-200/25 blur-3xl"
-        aria-hidden
-      />
+    <div className="flex min-h-screen flex-col">
+      <main className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 px-4 py-12 md:grid-cols-[1.05fr_1fr] md:px-8">
+        {/* Brand side: the deck's title treatment, drawn on the paper. */}
+        <Reveal className="hidden md:block">
+          <h2 className="title-display text-5xl leading-[1.05]">{t("common.appName")}</h2>
+          <p className="mt-3 max-w-sm text-lg text-ink-soft">{t("login.brand.tagline")}</p>
+          <SutureLine className="mt-8 w-full max-w-md" delay={0.4} />
+          <Stagger as="ul" className="mt-8 max-w-sm" delay={1.4} gap={0.12}>
+            {(tRaw("login.brand.points") ?? []).map((point, i) => (
+              <StaggerItem as="li" key={point} className="flex items-center gap-3 border-t border-line py-3 text-sm text-ink-soft">
+                <span className="section-num w-6">{String(i + 1).padStart(2, "0")}</span>
+                {point}
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </Reveal>
 
-      <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-12">
-        <div className="motion-safe:animate-scale-in">
-          <div className="surface-card relative overflow-hidden p-8 ring-1 ring-slate-200/60">
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-400 via-brand-500 to-brand-600" />
+        <Reveal delay={0.1}>
+          <div className="surface-card relative overflow-hidden p-8">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-brand-500" />
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold tracking-wide text-brand-700">{t("common.appName")}</p>
+              <p className="pill-header flex-1">{t("common.appName")}</p>
               <LanguageSwitch />
             </div>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{t("login.title")}</h1>
-            <p className="mt-1 text-sm text-slate-600">{t("login.subtitle")}</p>
+            <h1 className="title-display mt-4 text-3xl">{t("login.title")}</h1>
+            <p className="mt-1.5 text-sm text-ink-muted">{t("login.subtitle")}</p>
 
             <form
               onSubmit={handleSubmit}
-              className="mt-8 space-y-4"
+              className="mt-7 space-y-4"
               autoComplete="off"
               data-form-type="other"
               data-lpignore="true"
@@ -93,11 +97,8 @@ export default function LoginPage() {
                 readOnly
               />
 
-              <div className="motion-safe:animate-fade-in-up-fast motion-safe:[animation-delay:40ms]">
-                <label
-                  htmlFor="login-email"
-                  className="block text-xs font-semibold uppercase tracking-wide text-slate-500"
-                >
+              <div>
+                <label htmlFor="login-email" className="field-label">
                   {t("login.email")}
                 </label>
                 <input
@@ -109,16 +110,13 @@ export default function LoginPage() {
                   data-1p-ignore
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                  className="field-input mt-1.5"
                   placeholder="alex@demo.local"
                   required
                 />
               </div>
-              <div className="motion-safe:animate-fade-in-up-fast motion-safe:[animation-delay:90ms]">
-                <label
-                  htmlFor="login-password"
-                  className="block text-xs font-semibold uppercase tracking-wide text-slate-500"
-                >
+              <div>
+                <label htmlFor="login-password" className="field-label">
                   {t("login.password")}
                 </label>
                 <input
@@ -130,7 +128,7 @@ export default function LoginPage() {
                   data-1p-ignore
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                  className="field-input mt-1.5"
                   placeholder={DEMO_PASSWORD}
                   required
                 />
@@ -138,47 +136,46 @@ export default function LoginPage() {
 
               {error ? (
                 <p
-                  className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-900 motion-safe:animate-shake"
+                  className="border-l-2 border-bad bg-paper px-3 py-2.5 text-sm text-bad motion-safe:animate-shake"
                   role="alert"
                 >
                   {error}
                 </p>
               ) : null}
 
-              <button type="submit" disabled={submitting} className="btn-primary w-full rounded-xl py-3">
+              <button type="submit" disabled={submitting} className="btn-primary w-full py-3">
                 {submitting ? t("login.submitting") : t("login.submit")}
               </button>
             </form>
 
-            <p className="mt-4 rounded-lg border border-amber-100 bg-amber-50/80 px-3 py-2 text-xs text-amber-950">
+            <p className="tile-dashed mt-4 px-3 py-2 text-xs leading-5 text-ink-soft">
               {t("login.chromeHint.before")} <strong>{t("login.chromeHint.path")}</strong>{" "}
               {t("login.chromeHint.middle")} <code className="font-mono">demo</code>
               {t("login.chromeHint.after")}
             </p>
 
-            <div className="mt-4 rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50/90 to-slate-50 p-4 text-xs text-slate-600 transition-colors duration-200 hover:border-brand-100">
-              <p className="font-semibold text-slate-800">
+            <div className="tile mt-5 text-xs text-ink-muted">
+              <p className="font-semibold text-ink">
                 {t("login.demoAccounts")}{" "}
-                <span className="font-normal text-slate-500">
+                <span className="font-normal text-ink-muted">
                   {t("login.demoPassword", { password: DEMO_PASSWORD })}
                 </span>
               </p>
-              <ul className="mt-2 space-y-1.5 font-mono text-[11px] leading-relaxed">
+              <ul className="mt-2 space-y-1 font-mono text-[11px] leading-relaxed">
                 {DEMO_ACCOUNTS.map((acc) => (
-                  <li key={acc.login} className="transition-colors hover:text-slate-900">
-                    {acc.login} <span className="font-sans text-slate-400">
-                      · {t(`login.demoNotes.${acc.login.split("@")[0]}`, { defaultValue: acc.note })}
+                  <li key={acc.login} className="leader py-0.5 text-[11px]">
+                    <span className="text-ink-soft">{acc.login}</span>
+                    <span className="font-sans text-ink-muted">
+                      {t(`login.demoNotes.${acc.login.split("@")[0]}`, { defaultValue: acc.note })}
                     </span>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
-        </div>
 
-        <p className="mt-8 text-center text-xs text-slate-500 motion-safe:animate-fade-in-up motion-safe:[animation-delay:200ms]">
-          {t("login.footer")}
-        </p>
+          <p className="mt-6 text-center text-xs text-ink-muted">{t("login.footer")}</p>
+        </Reveal>
       </main>
     </div>
   );
