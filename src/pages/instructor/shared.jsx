@@ -115,7 +115,7 @@ const FEEDBACK_STATE = {
 
 export function FeedbackStateBadge({ state }) {
   const { t } = useI18n();
-  if (!state || !FEEDBACK_STATE[state]) return <span className="text-xs text-slate-400">—</span>;
+  if (!state || !FEEDBACK_STATE[state]) return <span className="text-xs text-grey-400">—</span>;
   return <span className={`chip py-0.5 ${FEEDBACK_STATE[state]}`}>{t(`instructor.feedbackState.${state}`)}</span>;
 }
 

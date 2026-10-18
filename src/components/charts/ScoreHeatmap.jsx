@@ -19,9 +19,9 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
         <table className="w-full min-w-[420px] border-separate text-sm" style={{ borderSpacing: 2 }}>
           <thead>
             <tr>
-              <th className="pb-2 pr-2 text-left text-xs font-semibold text-slate-500">{t("charts.heatmap.student")}</th>
+              <th className="pb-2 pr-2 text-left text-xs font-semibold text-grey-500">{t("charts.heatmap.student")}</th>
               {dimensions.map((d) => (
-                <th key={d} className="px-1 pb-2 text-center text-xs font-semibold text-slate-500">
+                <th key={d} className="px-1 pb-2 text-center text-xs font-semibold text-grey-500">
                   {dimensionName(t, d)}
                 </th>
               ))}
@@ -31,7 +31,7 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
             {rows.map((row) => (
               <tr key={row.id} className="group">
                 <th scope="row" className="pr-2 text-left font-medium">
-                  <Link to={`/instructor/students/${row.id}`} className="text-slate-800 hover:text-brand-700 hover:underline">
+                  <Link to={`/instructor/students/${row.id}`} className="text-grey-800 hover:text-brand-700 hover:underline">
                     {row.name}
                   </Link>
                 </th>
@@ -41,7 +41,7 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
                     return (
                       <td
                         key={d}
-                        className="h-9 rounded text-center text-xs text-slate-400"
+                        className="h-9 rounded text-center text-xs text-grey-400"
                         style={{ background: "repeating-linear-gradient(45deg,#f3f1ec,#f3f1ec 4px,#fff 4px,#fff 8px)" }}
                         title={t("charts.heatmap.noData", { name: row.name, dimension: dimensionName(t, d) })}
                       >
@@ -55,7 +55,7 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
                       key={d}
                       tabIndex={0}
                       title={t("charts.heatmap.cell", { name: row.name, dimension: dimensionName(t, d), value: v })}
-                      className="h-9 rounded text-center font-semibold tabular-nums outline-none transition-shadow hover:ring-2 hover:ring-slate-900/30 focus-visible:ring-2 focus-visible:ring-slate-900/40"
+                      className="h-9 rounded text-center font-semibold tabular-nums outline-none transition-shadow hover:ring-2 hover:ring-grey-900/30 focus-visible:ring-2 focus-visible:ring-grey-900/40"
                       style={{ background: fill, color: ink }}
                     >
                       {Math.round(v)}
@@ -68,11 +68,11 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
           {cohortAverages ? (
             <tfoot>
               <tr>
-                <th scope="row" className="pr-2 pt-2 text-left text-xs font-semibold text-slate-500">
+                <th scope="row" className="pr-2 pt-2 text-left text-xs font-semibold text-grey-500">
                   {t("charts.heatmap.cohortAverage")}
                 </th>
                 {dimensions.map((d) => (
-                  <td key={d} className="pt-2 text-center text-xs font-semibold tabular-nums text-slate-700">
+                  <td key={d} className="pt-2 text-center text-xs font-semibold tabular-nums text-grey-700">
                     {cohortAverages[d] != null ? Math.round(cohortAverages[d]) : "—"}
                   </td>
                 ))}
@@ -81,7 +81,7 @@ export default function ScoreHeatmap({ dimensions, rows, cohortAverages }) {
           ) : null}
         </table>
       </div>
-      <div className="mt-3 flex items-center gap-2 text-xs text-slate-500" aria-hidden>
+      <div className="mt-3 flex items-center gap-2 text-xs text-grey-500" aria-hidden>
         <span>{t("charts.heatmap.low", { value: LO })}</span>
         <span
           className="h-2 w-40 rounded"

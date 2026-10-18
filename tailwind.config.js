@@ -23,10 +23,10 @@ export default {
           soft: "#4a463f",
           muted: "#6f6a60",
         },
-        // The neutral and status scales are remapped onto the paper palette, so the existing
-        // slate-* / emerald-* / amber-* / rose-* classes across the app follow it: slate is a
-        // warm grey, the status hues are muted. Text shades (500+) keep >= 4.5:1 on white and paper.
-        slate: {
+        // `grey` is the warm neutral scale (text, rules, tiles); good / warn / bad are the muted
+        // status scales. The bare names (text-good, border-bad/50) are the 600 shade.
+        // Text shades (500+) keep >= 4.5:1 on white and paper.
+        grey: {
           50: "#faf9f6",
           100: "#f3f1ec",
           200: "#e8e3d8",
@@ -39,7 +39,11 @@ export default {
           900: "#2b2924",
           950: "#1c1a17",
         },
-        emerald: {
+        paper: "#f8f6f1",
+        line: "#e8e3d8",
+        mist: "#d9d3c6",
+        good: {
+          DEFAULT: "#4a7456",
           50: "#f1f6f2",
           100: "#e0ebe3",
           200: "#c3d8c9",
@@ -52,7 +56,8 @@ export default {
           900: "#283f2f",
           950: "#1d2e22",
         },
-        amber: {
+        warn: {
+          DEFAULT: "#8c6a22",
           50: "#faf5ea",
           100: "#f3e8cf",
           200: "#e8d5a8",
@@ -65,7 +70,8 @@ export default {
           900: "#4b3915",
           950: "#352810",
         },
-        rose: {
+        bad: {
+          DEFAULT: "#a24e36",
           50: "#f9f1ee",
           100: "#f2e0da",
           200: "#e6c3b8",
@@ -78,12 +84,6 @@ export default {
           900: "#592b1f",
           950: "#3f1e15",
         },
-        paper: "#f8f6f1",
-        line: "#e8e3d8",
-        mist: "#d9d3c6",
-        good: "#4a7456",
-        warn: "#8c6a22",
-        bad: "#a24e36",
       },
       fontFamily: {
         display: ["Barlow", "Montserrat", "system-ui", "sans-serif"],

@@ -23,7 +23,7 @@ const COLUMNS = [
 function AttentionList({ items }) {
   const { t } = useI18n();
   if (!items.length) {
-    return <p className="mt-4 text-sm text-slate-600">{t("instructor.overview.attentionEmpty")}</p>;
+    return <p className="mt-4 text-sm text-grey-600">{t("instructor.overview.attentionEmpty")}</p>;
   }
   return (
     <ul className="mt-4 space-y-2">
@@ -37,7 +37,7 @@ function AttentionList({ items }) {
             <Link to={`/instructor/students/${a.studentId}`} className="font-semibold text-ink hover:underline">
               {a.studentName}
             </Link>
-            <p className="text-slate-600">{attentionText(t, a)}</p>
+            <p className="text-grey-600">{attentionText(t, a)}</p>
           </div>
           {a.sessionId ? (
             <Link to={reportLink(a.sessionId)} className="link-brand shrink-0 text-xs">
@@ -72,7 +72,7 @@ function Roster({ students }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="section-title">{t("instructor.overview.studentsTitle")}</h2>
-          <p className="text-sm text-slate-600">{t("instructor.overview.studentsSubtitle")}</p>
+          <p className="text-sm text-grey-600">{t("instructor.overview.studentsSubtitle")}</p>
         </div>
         <input
           type="search"
@@ -93,7 +93,7 @@ function Roster({ students }) {
                     <button
                       type="button"
                       onClick={() => setSort((s) => ({ key: c.key, dir: s.key === c.key ? -s.dir : 1 }))}
-                      className="uppercase hover:text-slate-800"
+                      className="uppercase hover:text-grey-800"
                     >
                       {t(`instructor.overview.columns.${c.key}`)}
                       {sort.key === c.key ? (sort.dir > 0 ? " ↑" : " ↓") : ""}
@@ -107,18 +107,18 @@ function Roster({ students }) {
           </thead>
           <tbody>
             {rows.map((s) => (
-              <tr key={s.id} className="border-b border-slate-100 hover:bg-paper">
+              <tr key={s.id} className="border-b border-grey-100 hover:bg-paper">
                 <td className="py-3 pr-4">
                   <Link to={`/instructor/students/${s.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">
                     {s.name}
                   </Link>
-                  <p className="text-xs text-slate-500">{s.email}</p>
+                  <p className="text-xs text-grey-500">{s.email}</p>
                 </td>
-                <td className="py-3 pr-4 text-slate-700">
+                <td className="py-3 pr-4 text-grey-700">
                   {relativeDays(t, s.daysSinceActive)}
                   {s.inProgress ? <p className="text-xs text-brand-700">{t("instructor.counts.processing", { count: s.inProgress })}</p> : null}
                 </td>
-                <td className="py-3 pr-4 tabular-nums text-slate-700">
+                <td className="py-3 pr-4 tabular-nums text-grey-700">
                   {s.sessions7d} / {s.sessions30d}
                 </td>
                 <td className="py-3 pr-4 text-base font-semibold tabular-nums text-ink">{s.latestScore ?? "—"}</td>
@@ -127,7 +127,7 @@ function Roster({ students }) {
                 </td>
                 <td className="py-3 pr-4 font-semibold tabular-nums">
                   {s.recentChange == null ? (
-                    <span className="text-slate-400">—</span>
+                    <span className="text-grey-400">—</span>
                   ) : (
                     <span style={{ color: s.recentChange > 0 ? CHART.upGood : s.recentChange < 0 ? CHART.downBad : CHART.inkSecondary }}>
                       {s.recentChange > 0 ? "▲ " : s.recentChange < 0 ? "▼ " : ""}
@@ -135,14 +135,14 @@ function Roster({ students }) {
                     </span>
                   )}
                 </td>
-                <td className="py-3 pr-4 text-slate-700">{dimensionName(t, s.weakestDimension)}</td>
+                <td className="py-3 pr-4 text-grey-700">{dimensionName(t, s.weakestDimension)}</td>
                 <td className="py-3 pr-4">
                   {s.pendingReviews ? (
                     <span className="chip border-warn/50 py-0.5 text-warn">
                       {t("instructor.counts.reports", { count: s.pendingReviews })}
                     </span>
                   ) : (
-                    <span className="text-xs text-slate-400">—</span>
+                    <span className="text-xs text-grey-400">—</span>
                   )}
                   {s.openAppeals ? (
                     <span className="chip ml-1 border-bad/50 py-0.5 text-bad">
@@ -154,9 +154,9 @@ function Roster({ students }) {
             ))}
           </tbody>
         </table>
-        {!rows.length ? <p className="py-6 text-center text-sm text-slate-500">{t("instructor.overview.noMatch")}</p> : null}
+        {!rows.length ? <p className="py-6 text-center text-sm text-grey-500">{t("instructor.overview.noMatch")}</p> : null}
       </div>
-      <p className="mt-3 text-xs text-slate-500">
+      <p className="mt-3 text-xs text-grey-500">
         {t("instructor.overview.footnote")}
       </p>
     </section>
@@ -204,7 +204,7 @@ export default function InstructorDashboardPage() {
   if (cohorts && cohorts.length === 0) {
     return (
       <InstructorShell>
-        <p className="py-16 text-center text-slate-600">{t("instructor.overview.noCohort")}</p>
+        <p className="py-16 text-center text-grey-600">{t("instructor.overview.noCohort")}</p>
       </InstructorShell>
     );
   }
@@ -215,7 +215,7 @@ export default function InstructorDashboardPage() {
       {/* Filter row: scopes everything below. */}
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="title-display text-3xl">{t("instructor.overview.title")}</h1>
-        <label className="ml-auto flex items-center gap-2 text-sm text-slate-600">
+        <label className="ml-auto flex items-center gap-2 text-sm text-grey-600">
           {t("instructor.overview.cohort")}
           <select
             value={cohortId ?? ""}
@@ -232,7 +232,7 @@ export default function InstructorDashboardPage() {
       </div>
 
       {!data ? (
-        <p className="py-16 text-center text-sm text-slate-500">{t("instructor.overview.loading")}</p>
+        <p className="py-16 text-center text-sm text-grey-500">{t("instructor.overview.loading")}</p>
       ) : (
         <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -271,14 +271,14 @@ export default function InstructorDashboardPage() {
           <div className="mt-6 grid gap-6 lg:grid-cols-5">
             <section className="surface-card p-6 lg:col-span-2">
               <h2 className="section-title">{t("instructor.overview.attentionTitle")}</h2>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-grey-600">
                 {t("instructor.overview.attentionSubtitle")}
               </p>
               <AttentionList items={data.attention} />
             </section>
             <section className="surface-card p-6 lg:col-span-3">
               <h2 className="section-title">{t("instructor.overview.skillMapTitle")}</h2>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-grey-600">
                 {t("instructor.overview.skillMapSubtitle")}
               </p>
               <div className="mt-4">
