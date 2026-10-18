@@ -94,6 +94,7 @@ export default {
     },
     currentTask: {
       title: "当前训练任务",
+      detailsTitle: "任务详情",
       subtitle: "本课程中你下一步需要完成的任务。",
       task: "任务",
       status: "状态",
@@ -540,6 +541,8 @@ export default {
       pending: "待教师评审",
       reviewedBy: "{name} 已评审",
       pendingShort: "待教师评审",
+      stampReviewed: "已评审",
+      stampPending: "待教师评审",
     },
     overall: {
       title: "总体表现",

@@ -95,6 +95,7 @@ export default {
     },
     currentTask: {
       title: "Current training task",
+      detailsTitle: "Task details",
       subtitle: "What you are expected to complete next in this course.",
       task: "Task",
       status: "Status",
@@ -562,6 +563,9 @@ export default {
       pending: "Pending Instructor Review",
       reviewedBy: "Reviewed by {name}",
       pendingShort: "Pending instructor review",
+      // Short forms for the rotated stamp; the full status is its tooltip.
+      stampReviewed: "Reviewed",
+      stampPending: "Pending review",
     },
     overall: {
       title: "Overall Performance",

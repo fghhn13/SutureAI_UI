@@ -210,7 +210,7 @@ export default function StudentDashboardPage() {
         {/* 2. Current task + Last report */}
         <Stagger className="mt-6 grid gap-6 lg:grid-cols-2">
           <StaggerItem as="section" className="surface-card surface-card-lift p-6">
-            <h2 className="section-title"><span className="section-num">01</span>{t("dashboard.currentTask.title")}</h2>
+            <h2 className="section-title"><span className="section-num">01</span>{t("dashboard.currentTask.detailsTitle")}</h2>
             <p className="mt-1 text-sm text-ink-muted">{t("dashboard.currentTask.subtitle")}</p>
             {D.currentTask ? (
               <>
@@ -246,10 +246,6 @@ export default function StudentDashboardPage() {
                     </li>
                   ))}
                 </ul>
-                <Link to={trainPath(D.currentTask.id)} className="btn-primary mt-5 inline-flex items-center gap-2 px-4 py-2 text-sm">
-                  {t("dashboard.currentTask.start")}
-                  <ArrowRight size={15} strokeWidth={1.75} />
-                </Link>
               </>
             ) : (
               <p className="mt-4 text-sm text-ink-muted">{t("dashboard.currentTask.none")}</p>
@@ -366,6 +362,7 @@ export default function StudentDashboardPage() {
         {/* Training activity heatmap (above history) */}
         <Reveal className="mt-6">
           <TrainingActivityCalendar
+            number="06"
             activityByDate={D.trainingActivityCalendar.activityByDate}
             years={D.trainingActivityCalendar.years}
             defaultYear={D.trainingActivityCalendar.defaultYear}
@@ -374,7 +371,7 @@ export default function StudentDashboardPage() {
 
         {/* 5. History */}
         <Reveal as="section" className="surface-card mt-6 p-6">
-          <h2 className="section-title"><span className="section-num">06</span>{t("dashboard.history.title")}</h2>
+          <h2 className="section-title"><span className="section-num">07</span>{t("dashboard.history.title")}</h2>
           <p className="mt-1 text-sm text-ink-muted">{t("dashboard.history.subtitle")}</p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">

@@ -114,18 +114,26 @@ function seekSecondsFromClip(clip) {
   return parseTimeLabelToSeconds(clip.time);
 }
 
+/** "~2 min (includes interrupted segment)" -> "~2 min"; the qualifier goes to a tooltip. */
+function shortDuration(text) {
+  if (!text) return text;
+  return String(text).replace(/\s*[(（][^()（）]*[)）]\s*$/, "") || text;
+}
+
 function StatusBadge({ status }) {
   const { t } = useI18n();
-  const reviewed = status === "Reviewed";
+  // "Reviewed" and "Reviewed by <name>" both count as reviewed.
+  const reviewed = /^Reviewed\b/.test(status ?? "");
   const Icon = reviewed ? BadgeCheck : Hourglass;
   return (
     <span
+      title={reportStatusLabel(t, status)}
       className={`stamp motion-safe:animate-stamp ${
         reviewed ? "border-good text-good outline-good/50" : "border-warn text-warn outline-warn/50"
       }`}
     >
       <Icon size={13} strokeWidth={2} />
-      {reportStatusLabel(t, status)}
+      {reviewed ? t("report.statusBadge.stampReviewed") : t("report.statusBadge.stampPending")}
     </span>
   );
 }
@@ -909,7 +917,7 @@ function TrainingReportPage() {
   const headerMeta = [
     { icon: User, label: t("report.header.student"), value: report.student },
     { icon: CalendarClock, label: t("report.header.dateTime"), value: formatRecordedAt(report, locale) },
-    { icon: Timer, label: t("report.header.taskDuration"), value: report.duration },
+    { icon: Timer, label: t("report.header.taskDuration"), value: shortDuration(report.duration), title: report.duration },
     { icon: ShieldCheck, label: t("report.header.confidence"), value: reliabilityLabel(t, report.reliability) },
   ];
   const deltaText = String(report.delta);
@@ -921,7 +929,7 @@ function TrainingReportPage() {
   const overallStats = [
     { label: t("report.overall.reliability"), value: reliabilityLabel(t, report.reliability) },
     { label: t("report.overall.change"), value: report.delta, className: deltaClass },
-    { label: t("report.overall.duration"), value: report.duration },
+    { label: t("report.overall.duration"), value: shortDuration(report.duration), title: report.duration },
     { label: t("report.overall.dimensionAvg"), value: avgDimension },
   ];
 
@@ -980,7 +988,9 @@ function TrainingReportPage() {
               <IconBadge icon={m.icon} tone="soft" size="sm" />
               <div className="min-w-0">
                 <p className="eyebrow">{m.label.replace(/[:：]\s*$/, "")}</p>
-                <p className="text-sm font-semibold leading-snug text-ink">{m.value}</p>
+                <p className="text-sm font-semibold leading-snug text-ink" title={m.title}>
+                  {m.value}
+                </p>
               </div>
             </StaggerItem>
           ))}
@@ -1062,7 +1072,10 @@ function TrainingReportPage() {
                 {overallStats.map((s) => (
                   <li key={s.label} className="leader">
                     <span className="text-ink-muted">{s.label.replace(/[:：]\s*$/, "")}</span>
-                    <span className={`font-display text-base font-semibold ${s.className ?? "text-brand-800"}`}>
+                    <span
+                      className={`font-display text-base font-semibold ${s.className ?? "text-brand-800"}`}
+                      title={s.title}
+                    >
                       {s.value}
                     </span>
                   </li>

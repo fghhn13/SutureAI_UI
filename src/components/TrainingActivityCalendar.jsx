@@ -65,6 +65,7 @@ export default function TrainingActivityCalendar({
   activityByDate,
   years,
   defaultYear,
+  number,
 }) {
   const { t, locale, formatDate } = useI18n();
   const formatDisplayDate = (d) => formatDate(d, DISPLAY_DATE);
@@ -111,7 +112,10 @@ export default function TrainingActivityCalendar({
     <section className="surface-card surface-card-lift p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h2 className="section-title">{t("calendar.title")}</h2>
+          <h2 className="section-title">
+            {number ? <span className="section-num">{number}</span> : null}
+            {t("calendar.title")}
+          </h2>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">
             {t("calendar.subtitle")}
           </p>
