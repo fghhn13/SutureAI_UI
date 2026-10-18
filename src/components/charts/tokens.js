@@ -3,16 +3,16 @@
  * Text never uses series colours; marks carry identity, text uses ink tokens.
  */
 export const CHART = {
-  surface: "#fcfcfb",
-  inkPrimary: "#0b0b0b",
-  inkSecondary: "#52514e",
-  inkMuted: "#898781",
-  grid: "#e1e0d9",
-  axis: "#c3c2b7",
-  series: "#2a78d6", // categorical slot 1 (blue)
-  deEmphasis: "#c3c2b7", // sparkline body; the latest point takes the accent
-  upGood: "#006300",
-  downBad: "#d03b3b",
+  surface: "#ffffff",
+  inkPrimary: "#2b2924",
+  inkSecondary: "#4a463f",
+  inkMuted: "#6f6a60",
+  grid: "#e8e3d8",
+  axis: "#d9d3c6",
+  series: "#4f69c2", // categorical slot 1 (brand blue)
+  deEmphasis: "#d9d3c6", // sparkline body; the latest point takes the accent
+  upGood: "#4a7456",
+  downBad: "#a24e36",
 };
 
 /** Sequential blue ramp (100 → 700) for magnitude, e.g. the score heatmap. */

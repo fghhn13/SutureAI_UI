@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { Check, Dumbbell, Play, Target, TrendingDown, TrendingUp, X } from "lucide-react";
 import { CHART } from "../charts/tokens.js";
+import IconBadge from "../icons/IconBadge.jsx";
+import { GrowBar } from "../motion/index.jsx";
 import { useI18n } from "../../i18n/index.js";
 
 /**
@@ -25,13 +28,14 @@ export function TimeChips({ times, onSeek, className = "" }) {
             key={t}
             type="button"
             onClick={() => onSeek(t)}
-            className="rounded-md border border-brand-200 bg-white px-1.5 py-0.5 font-mono text-xs font-semibold text-brand-700 hover:bg-brand-50"
+            className="inline-flex items-center gap-1 rounded-sm border border-brand-200 bg-white px-1.5 py-0.5 font-mono text-xs font-semibold text-brand-600 transition-colors hover:border-brand-400 hover:text-brand-700"
             title={tr("report.focus.playFrom")}
           >
-            ▶ {clock(t)}
+            <Play size={10} strokeWidth={2.75} fill="currentColor" />
+            {clock(t)}
           </button>
         ) : (
-          <span key={t} className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">
+          <span key={t} className="rounded-sm bg-paper px-1.5 py-0.5 font-mono text-xs text-ink-muted">
             {clock(t)}
           </span>
         ),
@@ -46,30 +50,33 @@ export function FocusCard({ focus, onSeek }) {
   if (!focus?.title) return null;
   const times = focus.times ?? (focus.timeSeconds != null ? [focus.timeSeconds] : []);
   return (
-    <section className="mt-6 rounded-2xl border border-rose-200 bg-white p-6 shadow-soft">
+    <section className="glass-card mt-6 overflow-hidden p-6">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1 rounded-l-md bg-bad" />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-800">
-          ▲ {t("report.focus.fixFirst")}
-        </span>
-        <h2 className="text-lg font-semibold text-slate-900">{focus.title}</h2>
+        <IconBadge icon={Target} tone="rose" size="sm" />
+        <span className="chip border-bad/50 text-bad">{t("report.focus.fixFirst")}</span>
+        <h2 className="font-display text-xl font-semibold text-brand-800">{focus.title}</h2>
         {focus.impact ? (
-          <span className="ml-auto text-sm font-semibold text-slate-600">{t("report.focus.impact", { points: focus.impact })}</span>
+          <span className="ml-auto text-sm font-semibold text-ink-muted">{t("report.focus.impact", { points: focus.impact })}</span>
         ) : null}
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("report.focus.why")}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-700">{focus.why}</p>
+          <p className="eyebrow">{t("report.focus.why")}</p>
+          <p className="mt-1 text-sm leading-6 text-ink-soft">{focus.why}</p>
           {times.length ? (
-            <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+            <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
               {t("report.focus.seenAt")} <TimeChips times={times} onSeek={onSeek} />
             </p>
           ) : null}
         </div>
         {focus.drill ? (
-          <div className="rounded-xl bg-emerald-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">{t("report.focus.practice")}</p>
-            <p className="mt-1 text-sm leading-6 text-emerald-950">{focus.drill}</p>
+          <div className="border-l-2 border-good bg-paper p-4">
+            <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-good">
+              <Dumbbell size={14} strokeWidth={2.25} />
+              {t("report.focus.practice")}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-ink-soft">{focus.drill}</p>
           </div>
         ) : null}
       </div>
@@ -83,18 +90,20 @@ export function PointsLostCard({ items, total, onSeek }) {
   if (!items?.length) return null;
   const max = Math.max(...items.map((i) => i.points), 1);
   return (
-    <article className="surface-card p-6">
-      <h2 className="text-lg font-semibold text-slate-900">{t("report.points.title", { total })}</h2>
-      <p className="mt-1 text-sm text-slate-600">{t("report.points.subtitle")}</p>
+    <article className="glass-card p-6">
+      <h2 className="section-title">{t("report.points.title", { total })}</h2>
+      <p className="mt-1 text-sm text-ink-muted">{t("report.points.subtitle")}</p>
       <ul className="mt-4 space-y-3">
         {items.map((item, i) => (
           <li key={`${item.code ?? "other"}-${i}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
-            <span className={`text-sm ${item.code ? "font-medium text-slate-800" : "text-slate-500"}`}>{item.label}</span>
-            <span className="text-sm font-semibold tabular-nums text-slate-900">−{item.points}</span>
-            <div className="h-2 rounded-full bg-slate-100">
-              <div
-                className="h-2 rounded-r-full"
-                style={{ width: `${(item.points / max) * 100}%`, background: item.code ? CHART.downBad : CHART.deEmphasis }}
+            <span className={`text-sm ${item.code ? "font-medium text-ink" : "text-ink-muted"}`}>{item.label}</span>
+            <span className="font-display text-base font-semibold tabular-nums text-ink">−{item.points}</span>
+            <div className="h-1 overflow-hidden rounded-full bg-[#ebe6dc]">
+              <GrowBar
+                percent={(item.points / max) * 100}
+                delay={0.08 * i}
+                className="h-1 rounded-full"
+                style={{ background: item.code ? CHART.downBad : CHART.deEmphasis }}
               />
             </div>
             <TimeChips times={item.times} onSeek={onSeek} className="justify-end" />
@@ -110,21 +119,21 @@ export function ProgressCard({ changes, metrics }) {
   const { t } = useI18n();
   if (!changes?.length && !metrics?.length) return null;
   return (
-    <article className="surface-card p-6">
+    <article className="glass-card p-6">
       {changes?.length ? (
         <>
-          <h2 className="text-lg font-semibold text-slate-900">{t("report.progress.since")}</h2>
+          <h2 className="section-title">{t("report.progress.since")}</h2>
           <ul className="mt-3 space-y-1.5 text-sm">
             {changes.map((c) => {
               const up = c.to > c.from;
               return (
                 <li key={c.dimension} className="flex items-center gap-2">
-                  <span aria-hidden className="w-4 font-semibold" style={{ color: up ? CHART.upGood : CHART.downBad }}>
-                    {up ? "▲" : "▼"}
+                  <span aria-hidden className="w-4" style={{ color: up ? CHART.upGood : CHART.downBad }}>
+                    {up ? <TrendingUp size={16} strokeWidth={2.25} /> : <TrendingDown size={16} strokeWidth={2.25} />}
                   </span>
-                  <span className="text-slate-800">{c.name}</span>
-                  <span className="ml-auto tabular-nums text-slate-600">
-                    {c.from} → <span className="font-semibold text-slate-900">{c.to}</span>
+                  <span className="text-ink">{c.name}</span>
+                  <span className="ml-auto tabular-nums text-ink-muted">
+                    {c.from} → <span className="font-semibold text-ink">{c.to}</span>
                   </span>
                 </li>
               );
@@ -134,22 +143,22 @@ export function ProgressCard({ changes, metrics }) {
       ) : null}
       {metrics?.length ? (
         <>
-          <h2 className={`text-lg font-semibold text-slate-900 ${changes?.length ? "mt-5" : ""}`}>{t("report.progress.target")}</h2>
+          <h2 className={`section-title ${changes?.length ? "mt-6" : ""}`}>{t("report.progress.target")}</h2>
           <ul className="mt-3 space-y-1.5 text-sm">
             {metrics.map((m) => (
               <li key={m.key} className="flex items-center gap-2">
                 <span
                   aria-hidden
-                  className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white ${
-                    m.ok ? "bg-emerald-600" : "bg-rose-600"
+                  className={`flex h-4 w-4 items-center justify-center rounded-full text-white ${
+                    m.ok ? "bg-good" : "bg-bad"
                   }`}
                 >
-                  {m.ok ? "✓" : "✕"}
+                  {m.ok ? <Check size={10} strokeWidth={3} /> : <X size={10} strokeWidth={3} />}
                 </span>
-                <span className="text-slate-800">{m.label}</span>
+                <span className="text-ink">{m.label}</span>
                 <span className="ml-auto tabular-nums">
-                  <span className="font-semibold text-slate-900">{m.display}</span>
-                  <span className="text-slate-500">{t("report.progress.targetValue", { target: m.target })}</span>
+                  <span className="font-semibold text-ink">{m.display}</span>
+                  <span className="text-ink-muted">{t("report.progress.targetValue", { target: m.target })}</span>
                   <span className="sr-only">{m.ok ? t("report.progress.met") : t("report.progress.missed")}</span>
                 </span>
               </li>
@@ -163,9 +172,9 @@ export function ProgressCard({ changes, metrics }) {
 
 /** Marker styles; legend and aria text come from report.eventType.<type>. */
 const STRIP_STYLE = {
-  error: { color: "#d03b3b", height: "100%", width: 6, type: "error" },
-  warning: { color: "#fab219", height: "75%", width: 6, type: "warning" },
-  normal: { color: "#c3c2b7", height: "40%", width: 2, type: "normal" },
+  error: { color: "#a24e36", height: "100%", width: 6, type: "error" },
+  warning: { color: "#b8913f", height: "75%", width: 6, type: "warning" },
+  normal: { color: "#d9d3c6", height: "40%", width: 2, type: "normal" },
 };
 
 /** Where events fall along the recording; click a marker to play from there. */
@@ -177,7 +186,7 @@ export function TimelineStrip({ events, duration, onSeek }) {
   const ordered = [...events].sort((a, b) => (a.type === "normal") - (b.type === "normal")).reverse();
   return (
     <div className="mt-3">
-      <div className="relative h-8 rounded-md bg-slate-100" onMouseLeave={() => setHover(null)}>
+      <div className="relative h-8 rounded-sm border border-line bg-paper" onMouseLeave={() => setHover(null)}>
         {ordered.map((e) => {
           const s = STRIP_STYLE[e.type] ?? STRIP_STYLE.normal;
           return (
@@ -209,9 +218,9 @@ export function TimelineStrip({ events, duration, onSeek }) {
           );
         })}
       </div>
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
         {hover ? (
-          <span className="font-medium text-slate-800">
+          <span className="font-medium text-ink">
             {clock(hover.timeSeconds)} · {hover.title}
           </span>
         ) : (
