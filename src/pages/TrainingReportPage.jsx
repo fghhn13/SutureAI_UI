@@ -13,7 +13,6 @@ import {
   Flag,
   Gauge,
   Hourglass,
-  Lightbulb,
   Play,
   ShieldCheck,
   ShieldPlus,
@@ -418,7 +417,7 @@ function TimelineItem({ event, expanded, onToggle, onSeekToSeconds, report, canA
 function ClipCard({ clip, onReplay }) {
   const { t } = useI18n();
   return (
-    <article className="dashed-card group flex h-full flex-col p-4 transition-colors duration-300 hover:border-solid hover:border-brand-300">
+    <article className="tile-dashed group flex h-full flex-col transition-colors duration-300 hover:border-solid hover:border-brand-400 hover:bg-white">
       <div className="mb-2 flex items-center justify-between">
         <span className="font-mono text-xs font-semibold text-brand-600">{clip.time}</span>
         <span className="chip border-brand-200 text-brand-600">
@@ -523,47 +522,40 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
       <h2 className="section-title"><span className="section-num">05</span>{t("report.feedback.titleStudent")}</h2>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        <article className="rounded-md bg-brand-50/70 p-5 lg:col-span-2">
-          <p className="pill-header">{t("report.feedback.aiFeedback")}</p>
-          <AiFeedbackList items={data.aiFeedback} />
+        <div className="space-y-4 lg:col-span-2">
+          <article className="tile-blue p-5">
+            <p className="pill-header">{t("report.feedback.aiFeedback")}</p>
+            <AiFeedbackList items={data.aiFeedback} />
+          </article>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <article className="rounded-md border border-line border-l-2 border-l-good bg-white p-4 md:col-span-2">
-              <h4 className="flex items-center gap-2 font-display text-base font-semibold text-brand-800">
-                <IconBadge icon={BadgeCheck} tone="emerald" size="sm" />
-                {t("report.feedback.strengths")}
-              </h4>
+          <div className="grid gap-4 md:grid-cols-2">
+            <article className="tile md:col-span-2">
+              <h4 className="tile-title is-good">{t("report.feedback.strengths")}</h4>
               <ul className="mt-2 text-sm leading-6 text-ink-soft">
                 {data.strengths.map((item) => (
-                  <li key={item} className="border-b border-line py-2 last:border-0">
+                  <li key={item} className="border-b border-[#e4dfd5] py-2 last:border-0">
                     {item}
                   </li>
                 ))}
               </ul>
             </article>
 
-            <article className="rounded-md border border-line border-l-2 border-l-bad bg-white p-4">
-              <h4 className="flex items-center gap-2 font-display text-base font-semibold text-brand-800">
-                <IconBadge icon={TriangleAlert} tone="rose" size="sm" />
-                {t("report.feedback.improvements")}
-              </h4>
+            <article className="tile">
+              <h4 className="tile-title is-bad">{t("report.feedback.improvements")}</h4>
               <ul className="mt-2 text-sm leading-6 text-ink-soft">
                 {data.weaknesses.map((item) => (
-                  <li key={item} className="border-b border-line py-2 last:border-0">
+                  <li key={item} className="border-b border-[#e4dfd5] py-2 last:border-0">
                     {item}
                   </li>
                 ))}
               </ul>
             </article>
 
-            <article className="dashed-card p-4">
-              <h4 className="flex items-center gap-2 font-display text-base font-semibold text-brand-700">
-                <IconBadge icon={Lightbulb} tone="soft" size="sm" />
-                {t("report.feedback.nextSteps")}
-              </h4>
+            <article className="tile-dashed">
+              <h4 className="tile-title">{t("report.feedback.nextSteps")}</h4>
               <ul className="mt-2 text-sm leading-6 text-ink-soft">
                 {(data.suggestionDetails ?? data.suggestions.map((text) => ({ text, times: [] }))).map((item) => (
-                  <li key={item.text} className="border-b border-line py-2 last:border-0">
+                  <li key={item.text} className="border-b border-[#e4dfd5] py-2 last:border-0">
                     {item.text}
                     {item.times?.length ? <TimeChips times={item.times} onSeek={onSeek} className="ml-2" /> : null}
                   </li>
@@ -571,7 +563,7 @@ function StudentReportFeedbackReflectionSection({ data, onUpdated, onSeek }) {
               </ul>
             </article>
           </div>
-        </article>
+        </div>
 
         <div className="space-y-4 lg:col-span-1">
           <ReviewResultCard review={data.review} />
@@ -594,7 +586,7 @@ function InstructorReportFeedbackSection({ data, onUpdated, onSeek }) {
       <h2 className="section-title"><span className="section-num">05</span>{t("report.feedback.titleInstructor")}</h2>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        <article className="rounded-md bg-brand-50/70 p-5 lg:col-span-2">
+        <article className="tile-blue p-5 lg:col-span-2">
           <p className="pill-header">{t("report.feedback.aiFeedback")}</p>
           <AiFeedbackList items={data.aiFeedback} />
         </article>
@@ -1077,7 +1069,7 @@ function TrainingReportPage() {
                 ))}
               </ul>
               {report.scores && (report.scores.current !== report.scores.ai || report.scores.confirmedByInstructor) ? (
-                <p className="mt-3 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-800">
+                <p className="tile-blue mt-3 px-3 py-2 text-sm text-brand-800">
                   <span className="font-semibold">
                     {t("report.overall.currentScore", { score: report.scores.current })}
                   </span>
@@ -1113,11 +1105,11 @@ function TrainingReportPage() {
             {report.uncertainty.map((item, index) => (
               <li
                 key={item}
-                className="flex gap-3 border-l-2 border-warn bg-paper px-3 py-2.5"
+                className="tile flex gap-3 px-3 py-2.5"
               >
                 <TriangleAlert size={15} strokeWidth={1.75} className="mt-1 shrink-0 text-warn" />
                 <span>
-                  <span className="font-semibold text-warn">
+                  <span className="font-semibold text-amber-700">
                     {index === 0
                       ? t("report.notice.levelPrefix", { level: reliabilityLabel(t, report.reliability) })
                       : t("report.notice.caution")}

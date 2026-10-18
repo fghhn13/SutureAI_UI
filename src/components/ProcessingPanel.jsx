@@ -1,8 +1,55 @@
 import { useEffect, useRef, useState } from "react";
+import { Check, X } from "lucide-react";
 import { STAGES, activeStageIndex } from "../api/sessionStatus.js";
 import { intlLocale, useI18n } from "../i18n/index.js";
 
 const FEED_LINES = 6;
+const STITCHES = 20;
+
+/**
+ * Progress drawn as an incision being sutured: the cut fills in blue as work advances and a
+ * stitch crosses it at every 5%. Stitch marks pop in as they are passed.
+ */
+function StitchProgress({ pct, failed }) {
+  const done = failed ? "#a24e36" : "#4f69c2";
+  const reached = Math.floor((pct / 100) * STITCHES);
+  return (
+    <svg viewBox="0 0 400 28" preserveAspectRatio="none" className="h-7 w-full" aria-hidden="true">
+      <line x1="2" y1="14" x2="398" y2="14" stroke="#d9d3c6" strokeWidth="1.5" strokeDasharray="3 4" />
+      <line
+        x1="2"
+        y1="14"
+        x2={2 + (396 * pct) / 100}
+        y2="14"
+        stroke={done}
+        strokeWidth="2"
+        strokeLinecap="round"
+        className="transition-[x2] duration-150"
+      />
+      {Array.from({ length: STITCHES }, (_, i) => {
+        const x = 2 + (396 * (i + 0.5)) / STITCHES;
+        const on = i < reached;
+        return (
+          <line
+            key={i}
+            x1={x - 3}
+            y1="6"
+            x2={x + 3}
+            y2="22"
+            stroke={on ? done : "#e8e3d8"}
+            strokeWidth={on ? 2 : 1.5}
+            strokeLinecap="round"
+            style={{
+              transformOrigin: `${x}px 14px`,
+              transform: on ? "scaleY(1)" : "scaleY(0.55)",
+              transition: "transform 300ms cubic-bezier(0.2, 1.4, 0.4, 1), stroke 300ms",
+            }}
+          />
+        );
+      })}
+    </svg>
+  );
+}
 
 function fmtClock(s) {
   const t = Math.max(0, Math.round(s));
@@ -90,9 +137,9 @@ export default function ProcessingPanel({ session }) {
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       <div>
         <div className="flex items-end justify-between gap-4">
-          <p className="text-5xl font-semibold tabular-nums text-slate-900">
+          <p className="font-display text-6xl font-bold tabular-nums leading-none text-brand-800">
             {pct}
-            <span className="text-2xl text-slate-400">%</span>
+            <span className="ml-0.5 text-2xl font-semibold text-slate-400">%</span>
           </p>
           <p className="pb-1 text-sm text-slate-500">
             {session.status === "ready"
@@ -105,45 +152,40 @@ export default function ProcessingPanel({ session }) {
           </p>
         </div>
         <div
-          className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100"
+          className="mt-4"
           role="progressbar"
           aria-label={t("processing.progressLabel")}
           aria-valuenow={pct}
           aria-valuemin={0}
           aria-valuemax={100}
         >
-          <div
-            className={`h-full rounded-full transition-[width] duration-150 ${
-              session.status === "failed" ? "bg-rose-500" : "bg-brand-600"
-            }`}
-            style={{ width: `${pct}%` }}
-          />
+          <StitchProgress pct={pct} failed={session.status === "failed"} />
         </div>
 
-        <ol className="mt-6 space-y-2">
+        <ol className="mt-6 border-t border-line">
           {STAGES.map((s, i) => {
             const done = i < stageIdx;
             const active = i === stageIdx && running;
             const failedHere = i === stageIdx && session.status === "failed";
             return (
-              <li key={s.key} className="flex items-center gap-3 text-sm">
+              <li key={s.key} className="flex items-center gap-3 border-b border-line py-2.5 text-sm">
                 <span
                   aria-hidden
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
                     done
-                      ? "bg-emerald-600 text-white"
+                      ? "bg-brand-500 text-white"
                       : active
-                        ? "border-2 border-brand-500 border-t-transparent motion-safe:animate-spin"
+                        ? "border-[1.5px] border-brand-500 border-t-transparent motion-safe:animate-spin"
                         : failedHere
-                          ? "bg-rose-600 text-white"
-                          : "border border-slate-300"
+                          ? "bg-bad text-white"
+                          : "border border-mist"
                   }`}
                 >
-                  {done ? "✓" : failedHere ? "!" : ""}
+                  {done ? <Check size={12} strokeWidth={3} /> : failedHere ? <X size={12} strokeWidth={3} /> : null}
                 </span>
                 <span
                   className={
-                    done ? "text-slate-700" : active ? "font-semibold text-brand-700" : failedHere ? "font-semibold text-rose-700" : "text-slate-400"
+                    done ? "text-ink-soft" : active ? "font-semibold text-brand-700" : failedHere ? "font-semibold text-bad" : "text-slate-400"
                   }
                 >
                   {stageLabel(s.key)}
@@ -154,8 +196,8 @@ export default function ProcessingPanel({ session }) {
         </ol>
       </div>
 
-      <div className="flex min-h-[220px] flex-col rounded-xl bg-slate-900 p-4 font-mono text-[12.5px] leading-6 text-slate-300">
-        <p className="mb-2 text-[11px] uppercase tracking-wider text-slate-500">{t("processing.activity")}</p>
+      <div className="flex min-h-[220px] flex-col rounded-md bg-brand-900 p-4 font-mono text-[12.5px] leading-6 text-brand-100">
+        <p className="mb-2 text-[11px] uppercase tracking-wider text-brand-300">{t("processing.activity")}</p>
         <ul className="flex-1 space-y-0.5" aria-live="polite">
           {feed.map((line, i) => {
             const latest = i === feed.length - 1 && running;
@@ -163,7 +205,7 @@ export default function ProcessingPanel({ session }) {
               <li
                 key={line.id}
                 className={`flex gap-2 motion-safe:animate-fade-in-up-fast ${
-                  latest ? "text-white" : line.kind === "done" ? "text-emerald-400" : "text-slate-400"
+                  latest ? "text-white" : line.kind === "done" ? "text-emerald-300" : "text-brand-200/70"
                 }`}
               >
                 <span aria-hidden className="w-3 shrink-0">
@@ -174,7 +216,7 @@ export default function ProcessingPanel({ session }) {
             );
           })}
           {session.status === "ready" ? (
-            <li className="flex gap-2 text-emerald-400">
+            <li className="flex gap-2 text-emerald-300">
               <span className="w-3">✓</span>
               <span>{t("processing.reportReady")}</span>
             </li>

@@ -58,6 +58,10 @@ export default {
     demoAccounts: "Demo accounts",
     demoPassword: "(password {password})",
     footer: "Students and instructors sign in here.",
+    brand: {
+      tagline: "AI-powered surgical suturing assessment",
+      points: ["Capture every stitch", "Objective, explainable scores", "Feedback you can replay"],
+    },
     demoNotes: {
       chen: "instructor · Groups A & B",
       patel: "instructor · Group B",

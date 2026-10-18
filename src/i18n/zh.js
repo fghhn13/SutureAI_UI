@@ -57,6 +57,10 @@ export default {
     demoAccounts: "演示账号",
     demoPassword: "（密码 {password}）",
     footer: "学生和教师均从此处登录。",
+    brand: {
+      tagline: "AI 驱动的外科缝合技能评估",
+      points: ["记录每一针的操作", "客观、可解释的评分", "可回放的逐项反馈"],
+    },
     demoNotes: {
       chen: "教师 · A、B 班",
       patel: "教师 · B 班",

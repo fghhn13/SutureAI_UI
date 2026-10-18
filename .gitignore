@@ -61,3 +61,7 @@ __pycache__/
 
 # LaTeX build output (user guide)
 docs/user-guide/build/
+
+# LaTeX build output (design spec): figures, converted fonts, PDF
+docs/design/build/
+docs/design/SutureAI-Design-Spec.pdf

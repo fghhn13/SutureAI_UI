@@ -16,8 +16,8 @@ export default function DevUserSwitch() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 shadow-lg transition-all duration-200 hover:border-amber-300 hover:shadow-xl">
-      <span className="text-xs font-semibold uppercase tracking-wide text-amber-900">{t("devSwitch.badge")}</span>
+    <div className="fixed bottom-4 right-4 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-md border border-line bg-white px-3 py-2 shadow-lift transition-colors duration-200 hover:border-mist">
+      <span className="chip border-warn/50 text-warn">{t("devSwitch.badge")}</span>
       <label htmlFor="dev-user-switch" className="sr-only">
         {t("devSwitch.label")}
       </label>
@@ -25,7 +25,7 @@ export default function DevUserSwitch() {
         id="dev-user-switch"
         value={user.email}
         onChange={onChange}
-        className="rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-slate-800"
+        className="field-select px-2 py-1 text-xs"
       >
         {DEMO_ACCOUNTS.map((acc) => (
           <option key={acc.login} value={acc.login}>

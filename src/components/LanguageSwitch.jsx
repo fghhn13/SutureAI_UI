@@ -7,7 +7,7 @@ export default function LanguageSwitch({ className = "" }) {
     <div
       role="group"
       aria-label={t("language.label")}
-      className={`inline-flex shrink-0 rounded-lg border border-slate-300 bg-white p-0.5 text-xs font-semibold ${className}`}
+      className={`inline-flex shrink-0 rounded-md border border-mist bg-white p-0.5 text-xs font-semibold ${className}`}
     >
       {LOCALES.map((l) => {
         const active = l === locale;
@@ -18,8 +18,8 @@ export default function LanguageSwitch({ className = "" }) {
             lang={l === "zh" ? "zh-CN" : "en"}
             aria-pressed={active}
             onClick={() => setLocale(l)}
-            className={`rounded-md px-2 py-1 transition-colors ${
-              active ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100"
+            className={`rounded px-2 py-1 transition-colors ${
+              active ? "bg-brand-500 text-white" : "text-ink-muted hover:bg-paper hover:text-ink"
             }`}
           >
             {t(`language.${l}`)}

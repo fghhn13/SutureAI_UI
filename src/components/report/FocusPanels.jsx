@@ -71,7 +71,7 @@ export function FocusCard({ focus, onSeek }) {
           ) : null}
         </div>
         {focus.drill ? (
-          <div className="border-l-2 border-good bg-paper p-4">
+          <div className="tile-dashed">
             <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-good">
               <Dumbbell size={14} strokeWidth={2.25} />
               {t("report.focus.practice")}

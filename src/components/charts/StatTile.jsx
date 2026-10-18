@@ -11,10 +11,10 @@ export default function StatTile({ label, value, delta, deltaLabel, deltaSuffix 
   const good = hasDelta && (delta === 0 ? null : delta > 0 === upIsGood);
   const body = (
     <>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-3xl font-semibold text-slate-900">{value ?? "—"}</p>
+      <p className="eyebrow">{label}</p>
+      <p className="mt-1.5 font-display text-4xl font-bold leading-none text-brand-800">{value ?? "—"}</p>
       {hasDelta ? (
-        <p className="mt-1 text-xs">
+        <p className="mt-2 text-xs">
           <span
             className="font-semibold"
             style={{ color: good == null ? CHART.inkSecondary : good ? CHART.upGood : CHART.downBad }}
@@ -30,7 +30,7 @@ export default function StatTile({ label, value, delta, deltaLabel, deltaSuffix 
       ) : null}
     </>
   );
-  const cls = "surface-card block p-4 transition-colors";
+  const cls = "surface-card block p-4 transition-colors duration-200";
   return to ? (
     <Link to={to} className={`${cls} hover:border-brand-200`}>
       {body}

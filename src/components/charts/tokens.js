@@ -17,19 +17,19 @@ export const CHART = {
 
 /** Sequential blue ramp (100 → 700) for magnitude, e.g. the score heatmap. */
 export const BLUE_RAMP = [
-  "#cde2fb",
-  "#b7d3f6",
-  "#9ec5f4",
-  "#86b6ef",
-  "#6da7ec",
-  "#5598e7",
-  "#3987e5",
-  "#2a78d6",
-  "#256abf",
-  "#1c5cab",
-  "#184f95",
-  "#104281",
-  "#0d366b",
+  "#e2e8f8",
+  "#d1dbf3",
+  "#beccee",
+  "#a7b8e6",
+  "#8ea3de",
+  "#758cd4",
+  "#546ec4",
+  "#4e67c0",
+  "#445db1",
+  "#3c53a1",
+  "#354a91",
+  "#2e4179",
+  "#26365f",
 ];
 
 /** Map a value in [lo, hi] onto the ramp; returns fill + an ink that clears contrast on it. */
