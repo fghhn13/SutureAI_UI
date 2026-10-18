@@ -78,7 +78,7 @@ function Section({ title, children, keepTogether = true }) {
   // Short sections stay on one page; long ones (the timeline) may break between rows.
   return (
     <section className={`mt-6 ${keepTogether ? "break-inside-avoid-page" : ""}`}>
-      <h2 className="break-after-avoid border-b border-slate-300 pb-1 text-sm font-bold uppercase tracking-wide text-slate-700">
+      <h2 className="break-after-avoid border-b border-grey-300 pb-1 text-sm font-bold uppercase tracking-wide text-grey-700">
         {title}
       </h2>
       <div className="mt-2">{children}</div>
@@ -131,52 +131,52 @@ export default function ReportPrintPage() {
     if (report) document.title = t("report.printView.docTitle", { student: report.student, task: report.task });
   }, [report, t]);
 
-  if (error) return <p className="p-10 text-rose-700">{error}</p>;
-  if (!report) return <p className="p-10 text-slate-500">{t("report.loading")}</p>;
+  if (error) return <p className="p-10 text-bad-700">{error}</p>;
+  if (!report) return <p className="p-10 text-grey-500">{t("report.loading")}</p>;
 
   const scores = report.scores ?? { ai: report.overallScore, current: report.overallScore };
   const review = report.review?.status === "completed" ? report.review : null;
   const appeals = report.appeals ?? [];
 
   return (
-    <div className="min-h-screen bg-slate-100 print:bg-white">
+    <div className="min-h-screen bg-grey-100 print:bg-white">
       <style>{"@page { size: A4; margin: 14mm 12mm; } body { background: white; }"}</style>
 
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-6 py-3 print:hidden">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-grey-200 bg-white px-6 py-3 print:hidden">
         <button type="button" disabled={!ready} onClick={() => window.print()} className="btn-primary px-4 py-2">
           {ready ? t("report.printView.savePdf") : t("report.printView.preparing")}
         </button>
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-grey-600">
           {t("report.printView.hint.before")}
           <strong>{t("report.printView.hint.strong")}</strong>
           {t("report.printView.hint.after")}
         </span>
       </div>
 
-      <article className="mx-auto my-6 max-w-[210mm] bg-white p-10 text-[13px] leading-relaxed text-slate-800 shadow print:my-0 print:max-w-none print:p-0 print:shadow-none">
+      <article className="mx-auto my-6 max-w-[210mm] bg-white p-10 text-[13px] leading-relaxed text-grey-800 shadow print:my-0 print:max-w-none print:p-0 print:shadow-none">
         <header className="flex items-start justify-between gap-6 border-b-2 border-brand-600 pb-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">{t("report.printView.brand")}</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">{report.task}</h1>
-            <p className="mt-1 text-slate-600">
+            <h1 className="mt-1 text-2xl font-bold text-grey-900">{report.task}</h1>
+            <p className="mt-1 text-grey-600">
               {report.student} · {fmtDate(report.recordedAt, locale) || report.dateTime} · {report.duration}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-4xl font-bold text-slate-900">{scores.current}</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-4xl font-bold text-grey-900">{scores.current}</p>
+            <p className="text-xs text-grey-500">
               {scores.current !== scores.ai || review
                 ? t("report.printView.aiScoreValue", { score: scores.ai })
                 : t("report.printView.aiScore")}
               {review ? t("report.printView.confirmed") : ""}
             </p>
-            <p className="mt-1 text-xs font-semibold text-slate-600">{reportStatusLabel(t, report.status)}</p>
+            <p className="mt-1 text-xs font-semibold text-grey-600">{reportStatusLabel(t, report.status)}</p>
           </div>
         </header>
 
         <Section title={t("report.printView.summary")}>
           <p>{report.summary}</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-grey-500">
             {t("report.printView.summaryLine", {
               reliability: reliabilityLabel(t, report.reliability),
               delta: report.delta,
@@ -187,20 +187,20 @@ export default function ReportPrintPage() {
 
         {report.focus?.title ? (
           <Section title={t("report.focus.fixFirst")}>
-            <div className="rounded border-l-4 border-rose-500 bg-rose-50/50 px-3 py-2">
+            <div className="rounded border-l-4 border-bad-500 bg-bad-50/50 px-3 py-2">
               <p className="font-semibold">
                 {report.focus.title}
-                {report.focus.impact ? <span className="font-normal text-slate-600">
+                {report.focus.impact ? <span className="font-normal text-grey-600">
                     {" · "}
                     {t("report.focus.impact", { points: report.focus.impact })}
                   </span> : null}
                 {report.focus.times?.length ? (
-                  <span className="font-normal text-slate-600">
+                  <span className="font-normal text-grey-600">
                     {t("report.printView.focusAt", { times: report.focus.times.map(clock).join(", ") })}
                   </span>
                 ) : null}
               </p>
-              <p className="text-slate-700">{report.focus.why}</p>
+              <p className="text-grey-700">{report.focus.why}</p>
               {report.focus.drill ? <p className="mt-1">
                   <strong>{t("report.printView.practice")}</strong> {report.focus.drill}
                 </p> : null}
@@ -213,24 +213,24 @@ export default function ReportPrintPage() {
             <table className="w-full border-collapse">
               <tbody>
                 {report.pointsLost.map((p, i) => (
-                  <tr key={i} className="border-b border-slate-100">
+                  <tr key={i} className="border-b border-grey-100">
                     <td className="py-1">{p.label}</td>
                     <td className="w-44 py-1">
-                      <div className="h-2 rounded bg-slate-100">
+                      <div className="h-2 rounded bg-grey-100">
                         <div
-                          className={`h-2 rounded ${p.code ? "bg-rose-600" : "bg-slate-400"}`}
+                          className={`h-2 rounded ${p.code ? "bg-bad-600" : "bg-grey-400"}`}
                           style={{ width: `${(p.points / Math.max(...report.pointsLost.map((x) => x.points))) * 100}%` }}
                         />
                       </div>
                     </td>
                     <td className="w-12 py-1 text-right font-semibold tabular-nums">−{p.points}</td>
-                    <td className="w-28 py-1 pl-3 font-mono text-xs text-slate-500">{(p.times ?? []).map(clock).join(" ")}</td>
+                    <td className="w-28 py-1 pl-3 font-mono text-xs text-grey-500">{(p.times ?? []).map(clock).join(" ")}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             {report.keyMetrics?.length ? (
-              <p className="mt-2 text-xs text-slate-600">
+              <p className="mt-2 text-xs text-grey-600">
                 {report.keyMetrics
                   .map((m) =>
                     t("report.printView.metricLine", {
@@ -250,15 +250,15 @@ export default function ReportPrintPage() {
           <table className="w-full border-collapse">
             <tbody>
               {report.dimensions.map((d) => (
-                <tr key={d.name} className="border-b border-slate-100">
+                <tr key={d.name} className="border-b border-grey-100">
                   <td className="w-36 py-1.5 font-semibold">{d.name}</td>
                   <td className="w-40 py-1.5">
-                    <div className="h-2 rounded bg-slate-100">
+                    <div className="h-2 rounded bg-grey-100">
                       <div className="h-2 rounded bg-brand-600" style={{ width: `${d.score}%` }} />
                     </div>
                   </td>
                   <td className="w-10 py-1.5 text-right font-semibold tabular-nums">{d.score}</td>
-                  <td className="py-1.5 pl-4 text-slate-600">{d.explanation}</td>
+                  <td className="py-1.5 pl-4 text-grey-600">{d.explanation}</td>
                 </tr>
               ))}
             </tbody>
@@ -272,21 +272,21 @@ export default function ReportPrintPage() {
                 const at = seconds(e);
                 const still = at != null ? frames?.[at] : null;
                 return (
-                  <tr key={e.id} className="break-inside-avoid border-b border-slate-100 align-top">
+                  <tr key={e.id} className="break-inside-avoid border-b border-grey-100 align-top">
                     {Object.keys(frames ?? {}).length ? (
                       <td className="w-[124px] py-2 pr-3">
                         {still ? (
-                          <img src={still} alt={t("report.printView.stillAlt", { time: e.time })} className="w-[120px] rounded border border-slate-200" />
+                          <img src={still} alt={t("report.printView.stillAlt", { time: e.time })} className="w-[120px] rounded border border-grey-200" />
                         ) : null}
                       </td>
                     ) : null}
                     <td className="w-14 py-2 font-mono font-semibold text-brand-700">{at != null ? clock(at) : e.time}</td>
                     <td className="py-2">
-                      <p className={`font-semibold ${e.overturned ? "text-slate-400 line-through" : ""}`}>{e.title}</p>
-                      {e.detail ? <p className="text-slate-600">{e.detail}</p> : null}
-                      {e.overturned ? <p className="text-xs font-semibold text-emerald-700">{t("report.printView.overturned")}</p> : null}
+                      <p className={`font-semibold ${e.overturned ? "text-grey-400 line-through" : ""}`}>{e.title}</p>
+                      {e.detail ? <p className="text-grey-600">{e.detail}</p> : null}
+                      {e.overturned ? <p className="text-xs font-semibold text-good-700">{t("report.printView.overturned")}</p> : null}
                     </td>
-                    <td className="w-20 py-2 text-right text-xs font-semibold text-slate-500">{t(`report.eventType.${e.type}`, { defaultValue: e.type })}</td>
+                    <td className="w-20 py-2 text-right text-xs font-semibold text-grey-500">{t(`report.eventType.${e.type}`, { defaultValue: e.type })}</td>
                   </tr>
                 );
               })}
@@ -317,7 +317,7 @@ export default function ReportPrintPage() {
               <li key={item.text}>
                 {item.text}
                 {item.times?.length ? (
-                  <span className="ml-1 font-mono text-xs text-slate-500">({item.times.map(clock).join(", ")})</span>
+                  <span className="ml-1 font-mono text-xs text-grey-500">({item.times.map(clock).join(", ")})</span>
                 ) : null}
               </li>
             ))}
@@ -327,7 +327,7 @@ export default function ReportPrintPage() {
         {appeals.length ? (
           <Section title={t("report.printView.appeals")}>
             {appeals.map((a) => (
-              <div key={a.id} className="mb-3 break-inside-avoid rounded border border-slate-200 p-3">
+              <div key={a.id} className="mb-3 break-inside-avoid rounded border border-grey-200 p-3">
                 <p className="font-semibold">
                   {a.eventTime != null ? `${clock(a.eventTime)} · ` : ""}
                   {t("report.printView.appealLine", {
@@ -342,14 +342,14 @@ export default function ReportPrintPage() {
                           : t("report.printView.appealStatus.rejected"),
                   })}
                 </p>
-                <p className="text-slate-600">
+                <p className="text-grey-600">
                   {t("report.printView.studentReason", {
                     reason: t(`report.printView.reasons.${a.reason}`, { defaultValue: a.reason }),
                     message: a.message,
                   })}
                 </p>
                 {a.decisionNote ? (
-                  <p className="text-slate-600">
+                  <p className="text-grey-600">
                     {a.decidedBy}: “{a.decisionNote}”
                   </p>
                 ) : null}
@@ -367,7 +367,7 @@ export default function ReportPrintPage() {
             </p>
             {review.comment ? <p className="mt-1">{review.comment}</p> : null}
             {review.teachingFocus?.length ? (
-              <p className="mt-1 text-slate-600">
+              <p className="mt-1 text-grey-600">
                 {t("report.printView.teachingFocus", {
                   items: review.teachingFocus.join(t("report.printView.listSeparator")),
                 })}
@@ -378,7 +378,7 @@ export default function ReportPrintPage() {
 
         {report.uncertainty?.length ? (
           <Section title={t("report.printView.limitations")}>
-            <ul className="list-disc pl-5 text-slate-600">
+            <ul className="list-disc pl-5 text-grey-600">
               {report.uncertainty.map((u) => (
                 <li key={u}>{u}</li>
               ))}
@@ -386,7 +386,7 @@ export default function ReportPrintPage() {
           </Section>
         ) : null}
 
-        <footer className="mt-8 border-t border-slate-200 pt-2 text-[11px] text-slate-400">
+        <footer className="mt-8 border-t border-grey-200 pt-2 text-[11px] text-grey-400">
           {t("report.printView.footer", {
             date: fmtDate(new Date().toISOString(), locale),
             id: report.meta?.sessionId,

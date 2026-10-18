@@ -60,8 +60,8 @@ function TaskPicker({ tasks, selectedId, onSelect, disabled }) {
           >
             {active ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-brand-500" /> : null}
             <p className="font-display text-base font-semibold text-brand-800">{taskName(t, task.id, task.name)}</p>
-            <p className="mt-1 text-xs text-slate-600">{taskDescription(t, task)}</p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-grey-600">{taskDescription(t, task)}</p>
+            <p className="mt-2 text-xs text-grey-500">
               {durationLabel(t, task.estimatedDuration)} ·{" "}
               {t("train.dimensionsCount", { count: task.dimensions.length })}
             </p>
@@ -113,10 +113,10 @@ function VideoDropZone({ file, previewUrl, duration, onFile, disabled }) {
           strokeWidth={1.5}
           className={`mb-3 text-brand-500 transition-transform duration-300 ease-smooth ${dragOver ? "-translate-y-1" : ""}`}
         />
-        <p className="text-sm font-semibold text-slate-800">
+        <p className="text-sm font-semibold text-grey-800">
           {file ? t("train.dropChange") : t("train.dropPrompt")}
         </p>
-        <p className="mt-1 text-xs text-slate-500">{t("train.formats")}</p>
+        <p className="mt-1 text-xs text-grey-500">{t("train.formats")}</p>
         <input
           ref={inputRef}
           type="file"
@@ -135,22 +135,22 @@ function VideoDropZone({ file, previewUrl, duration, onFile, disabled }) {
             src={previewUrl}
             controls
             muted
-            className="aspect-video w-full rounded-md bg-slate-900 object-contain"
+            className="aspect-video w-full rounded-md bg-grey-900 object-contain"
           />
           <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">{t("train.file")}</dt>
-              <dd className="truncate font-medium text-slate-900" title={file.name}>
+            <div className="flex justify-between gap-4 border-b border-grey-100 pb-2">
+              <dt className="text-grey-500">{t("train.file")}</dt>
+              <dd className="truncate font-medium text-grey-900" title={file.name}>
                 {file.name}
               </dd>
             </div>
-            <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">{t("train.size")}</dt>
-              <dd className="text-slate-800">{formatBytes(file.size)}</dd>
+            <div className="flex justify-between gap-4 border-b border-grey-100 pb-2">
+              <dt className="text-grey-500">{t("train.size")}</dt>
+              <dd className="text-grey-800">{formatBytes(file.size)}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">{t("train.duration")}</dt>
-              <dd className="text-slate-800">{duration != null ? formatSeconds(duration) : "—"}</dd>
+              <dt className="text-grey-500">{t("train.duration")}</dt>
+              <dd className="text-grey-800">{duration != null ? formatSeconds(duration) : "—"}</dd>
             </div>
           </dl>
         </div>
@@ -343,7 +343,7 @@ export default function TrainingSessionPage() {
               ? taskName(t, selectedTask.id, selectedTask.name)
               : t("train.titleFallback")}
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-grey-600">
           {needsUpload
             ? t("train.introNew")
             : t("train.statusLine", { status: statusLabel(t, session.status) })}
@@ -363,7 +363,7 @@ export default function TrainingSessionPage() {
                   disabled={uploading || Boolean(session)}
                 />
               ) : (
-                <p className="text-sm text-slate-500">{t("train.loadingTasks")}</p>
+                <p className="text-sm text-grey-500">{t("train.loadingTasks")}</p>
               )}
             </div>
           </Reveal>
@@ -379,7 +379,7 @@ export default function TrainingSessionPage() {
                 disabled={uploading}
               />
               {fileError ? (
-                <p className="mt-3 text-sm text-rose-700" role="alert">
+                <p className="mt-3 text-sm text-bad-700" role="alert">
                   {t(fileError)}
                 </p>
               ) : null}
@@ -390,10 +390,10 @@ export default function TrainingSessionPage() {
             {uploading ? (
               <div>
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-slate-800">{t("train.uploading")}</span>
-                  <span className="tabular-nums text-slate-600">{Math.round(progress * 100)}%</span>
+                  <span className="font-medium text-grey-800">{t("train.uploading")}</span>
+                  <span className="tabular-nums text-grey-600">{Math.round(progress * 100)}%</span>
                 </div>
-                <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-200">
+                <div className="mt-2 h-1 overflow-hidden rounded-full bg-grey-200">
                   <div
                     className="h-full rounded-full bg-brand-500 transition-[width] duration-200"
                     style={{ width: `${Math.round(progress * 100)}%` }}
@@ -418,7 +418,7 @@ export default function TrainingSessionPage() {
                   <ScanLine size={16} strokeWidth={1.75} />
                   {t("train.uploadAnalyse")}
                 </button>
-                {!file ? <span className="text-sm text-slate-500">{t("train.chooseVideo")}</span> : null}
+                {!file ? <span className="text-sm text-grey-500">{t("train.chooseVideo")}</span> : null}
               </div>
             )}
             {actionError ? (
@@ -434,11 +434,11 @@ export default function TrainingSessionPage() {
 
           {session.status === "ready" ? (
             <div className="mt-6 flex flex-wrap items-center gap-4">
-              <p className="text-sm text-slate-700">
+              <p className="text-sm text-grey-700">
                 {t("train.overallScore")}{" "}
                 <CountUp value={session.overallScore} className="font-display text-3xl font-bold text-brand-700" />
-                <span className="text-slate-500"> {t("common.outOf100")}</span>
-                {autoOpening ? <span className="ml-3 text-slate-500">{t("train.openingReport")}</span> : null}
+                <span className="text-grey-500"> {t("common.outOf100")}</span>
+                {autoOpening ? <span className="ml-3 text-grey-500">{t("train.openingReport")}</span> : null}
               </p>
               <Link
                 to={{ pathname: "/report", search: `?session=${encodeURIComponent(session.id)}` }}
@@ -459,19 +459,19 @@ export default function TrainingSessionPage() {
               </button>
             </div>
           ) : (
-            <p className="mt-6 text-sm text-slate-600">
+            <p className="mt-6 text-sm text-grey-600">
               {t("train.leaveHint")}
             </p>
           )}
 
           {session.video ? (
-            <p className="mt-6 text-xs text-slate-500">
+            <p className="mt-6 text-xs text-grey-500">
               {session.video.originalFilename ?? t("train.video")} · {formatBytes(session.video.sizeBytes)}
               {session.video.durationS != null ? ` · ${formatSeconds(session.video.durationS)}` : ""}
             </p>
           ) : null}
           {actionError ? (
-            <p className="mt-3 text-sm text-rose-700" role="alert">
+            <p className="mt-3 text-sm text-bad-700" role="alert">
               {actionError}
             </p>
           ) : null}

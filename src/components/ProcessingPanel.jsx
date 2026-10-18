@@ -139,9 +139,9 @@ export default function ProcessingPanel({ session }) {
         <div className="flex items-end justify-between gap-4">
           <p className="font-display text-6xl font-bold tabular-nums leading-none text-brand-800">
             {pct}
-            <span className="ml-0.5 text-2xl font-semibold text-slate-400">%</span>
+            <span className="ml-0.5 text-2xl font-semibold text-grey-400">%</span>
           </p>
-          <p className="pb-1 text-sm text-slate-500">
+          <p className="pb-1 text-sm text-grey-500">
             {session.status === "ready"
               ? t("processing.complete")
               : session.status === "failed"
@@ -185,7 +185,7 @@ export default function ProcessingPanel({ session }) {
                 </span>
                 <span
                   className={
-                    done ? "text-ink-soft" : active ? "font-semibold text-brand-700" : failedHere ? "font-semibold text-bad" : "text-slate-400"
+                    done ? "text-ink-soft" : active ? "font-semibold text-brand-700" : failedHere ? "font-semibold text-bad" : "text-grey-400"
                   }
                 >
                   {stageLabel(s.key)}
@@ -205,7 +205,7 @@ export default function ProcessingPanel({ session }) {
               <li
                 key={line.id}
                 className={`flex gap-2 motion-safe:animate-fade-in-up-fast ${
-                  latest ? "text-white" : line.kind === "done" ? "text-emerald-300" : "text-brand-200/70"
+                  latest ? "text-white" : line.kind === "done" ? "text-good-300" : "text-brand-200/70"
                 }`}
               >
                 <span aria-hidden className="w-3 shrink-0">
@@ -216,7 +216,7 @@ export default function ProcessingPanel({ session }) {
             );
           })}
           {session.status === "ready" ? (
-            <li className="flex gap-2 text-emerald-300">
+            <li className="flex gap-2 text-good-300">
               <span className="w-3">✓</span>
               <span>{t("processing.reportReady")}</span>
             </li>

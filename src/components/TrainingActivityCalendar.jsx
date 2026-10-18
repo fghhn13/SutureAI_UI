@@ -51,10 +51,10 @@ function buildWeekColumns(year) {
 
 function cellClasses(level, inSelectedYear, hasData) {
   if (!inSelectedYear) {
-    return "bg-slate-50 border border-transparent";
+    return "bg-grey-50 border border-transparent";
   }
   if (level === 0 || !hasData) {
-    return "bg-slate-100 border border-slate-200/80";
+    return "bg-grey-100 border border-grey-200/80";
   }
   if (level === 1) return "bg-brand-200 border border-brand-300/60";
   if (level === 2) return "bg-brand-400 border border-brand-500/50";
@@ -116,16 +116,16 @@ export default function TrainingActivityCalendar({
             {number ? <span className="section-num">{number}</span> : null}
             {t("calendar.title")}
           </h2>
-          <p className="mt-1 max-w-2xl text-sm text-slate-600">
+          <p className="mt-1 max-w-2xl text-sm text-grey-600">
             {t("calendar.subtitle")}
           </p>
-          <p className="mt-3 text-sm text-slate-700">
+          <p className="mt-3 text-sm text-grey-700">
             <span className="font-display text-lg font-semibold text-brand-700">{totalSessionsInYear}</span>{" "}
             {t("calendar.sessionsInYear", { count: totalSessionsInYear, year: selectedYear })}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <span className="text-xs font-medium uppercase tracking-wide text-grey-500">
             {t("calendar.year")}
           </span>
           <div className="flex flex-col gap-1">
@@ -153,7 +153,7 @@ export default function TrainingActivityCalendar({
 
       <div className="relative mt-6 flex gap-2 overflow-x-auto pb-2" onMouseLeave={onLeaveGrid}>
         {/* Weekday labels */}
-        <div className="flex shrink-0 flex-col justify-between pt-6 text-[10px] font-medium text-slate-400">
+        <div className="flex shrink-0 flex-col justify-between pt-6 text-[10px] font-medium text-grey-400">
           <span className="h-3 leading-3">{weekdayLabel(locale, 0)}</span>
           <span className="h-3 leading-3" aria-hidden />
           <span className="h-3 leading-3">{weekdayLabel(locale, 2)}</span>
@@ -169,7 +169,7 @@ export default function TrainingActivityCalendar({
             {monthLabels.map(({ wi, label }) => (
               <div
                 key={wi}
-                className="w-3 shrink-0 text-center text-[10px] font-medium leading-none text-slate-500"
+                className="w-3 shrink-0 text-center text-[10px] font-medium leading-none text-grey-500"
                 style={{ width: "11px" }}
               >
                 {label}
@@ -250,31 +250,31 @@ export default function TrainingActivityCalendar({
             transform: "translate(-50%, -100%)",
           }}
         >
-          <p className="font-semibold text-slate-900">{formatDisplayDate(hover.date)}</p>
-          <p className="mt-1 text-slate-700">
+          <p className="font-semibold text-grey-900">{formatDisplayDate(hover.date)}</p>
+          <p className="mt-1 text-grey-700">
             {t("calendar.tooltipSessions", { count: hover.data.sessions })}
           </p>
-          <p className="mt-1 text-slate-600">
+          <p className="mt-1 text-grey-600">
             {t("calendar.tooltipTasks", {
               tasks: hover.data.tasks?.map((name) => taskName(t, name)).join(locale === "zh" ? "、" : ", ") || "—",
             })}
           </p>
-          <p className="mt-1 text-slate-600">
+          <p className="mt-1 text-grey-600">
             {t("calendar.tooltipTime", { minutes: hover.data.totalMinutes ?? "—" })}
           </p>
-          <p className="mt-1 text-slate-600">
+          <p className="mt-1 text-grey-600">
             {t("calendar.tooltipReports", { count: hover.data.reportsReady ?? 0 })}
           </p>
         </div>
       )}
 
       {/* Legend */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-grey-100 pt-4 text-xs text-grey-500">
         <span>{t("calendar.legend")}</span>
         <div className="flex items-center gap-2">
           <span>{t("calendar.less")}</span>
           <div className="flex gap-1">
-            <span className="h-3 w-3 rounded-sm bg-slate-100 ring-1 ring-slate-200/80" />
+            <span className="h-3 w-3 rounded-sm bg-grey-100 ring-1 ring-grey-200/80" />
             <span className="h-3 w-3 rounded-sm bg-brand-200 ring-1 ring-brand-300/60" />
             <span className="h-3 w-3 rounded-sm bg-brand-400 ring-1 ring-brand-500/50" />
             <span className="h-3 w-3 rounded-sm bg-brand-600 ring-1 ring-brand-700/40" />
@@ -286,11 +286,11 @@ export default function TrainingActivityCalendar({
       {/* Selected day summary */}
       {selectedKey && selectedKey.startsWith(`${selectedYear}-`) && (
         <div className="mt-5 rounded-md border border-line bg-paper p-4 motion-safe:animate-fade-in-up-fast">
-          <p className="text-sm font-semibold text-slate-900">
+          <p className="text-sm font-semibold text-grey-900">
             {formatDisplayDate(new Date(`${selectedKey}T12:00:00`))}
           </p>
           {(activityByDate[selectedKey]?.sessions ?? 0) === 0 ? (
-            <p className="mt-3 text-sm text-slate-600">
+            <p className="mt-3 text-sm text-grey-600">
               {t("calendar.emptyDay")}
             </p>
           ) : (
@@ -301,8 +301,8 @@ export default function TrainingActivityCalendar({
                   className="flex flex-col gap-2 rounded-md border border-line bg-white p-3 text-sm transition-colors duration-200 hover:border-brand-200 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="font-medium text-slate-900">{taskName(t, rec.taskName)}</p>
-                    <p className="text-slate-600">
+                    <p className="font-medium text-grey-900">{taskName(t, rec.taskName)}</p>
+                    <p className="text-grey-600">
                       {t("calendar.recordLine", {
                         score: rec.score != null ? `${rec.score}/100` : "—",
                         reliability: reliabilityLabel(t, rec.reliability),

@@ -14,7 +14,7 @@ export default function ProtectedRoute({ roles }) {
   const { t } = useI18n();
 
   if (loading) {
-    return <p className="py-24 text-center text-sm text-slate-500">{t("common.loading")}</p>;
+    return <p className="py-24 text-center text-sm text-grey-500">{t("common.loading")}</p>;
   }
 
   if (!user) {

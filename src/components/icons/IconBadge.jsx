@@ -5,9 +5,9 @@
 const TONES = {
   brand: "border-brand-200 bg-brand-50 text-brand-600",
   soft: "border-line bg-white text-brand-500",
-  amber: "border-warn/30 bg-warn/5 text-warn",
-  rose: "border-bad/30 bg-bad/5 text-bad",
-  emerald: "border-good/30 bg-good/5 text-good",
+  warn: "border-warn/30 bg-warn/5 text-warn",
+  bad: "border-bad/30 bg-bad/5 text-bad",
+  good: "border-good/30 bg-good/5 text-good",
 };
 
 const SIZES = {

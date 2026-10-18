@@ -461,7 +461,7 @@ function AssessmentHighlightsCard({ highlights }) {
       label: t("report.highlights.mainIssue"),
       value: highlights.mainIssue,
       icon: CircleAlert,
-      tone: "rose",
+      tone: "bad",
       valueClassName: "text-bad",
     },
     {
@@ -482,7 +482,7 @@ function AssessmentHighlightsCard({ highlights }) {
       label: t("report.highlights.reviewStatus"),
       value: reportStatusLabel(t, highlights.reviewStatus),
       icon: ShieldCheck,
-      tone: "amber",
+      tone: "warn",
       valueClassName: "text-warn",
     },
   ];
@@ -1122,7 +1122,7 @@ function TrainingReportPage() {
               >
                 <TriangleAlert size={15} strokeWidth={1.75} className="mt-1 shrink-0 text-warn" />
                 <span>
-                  <span className="font-semibold text-amber-700">
+                  <span className="font-semibold text-warn-700">
                     {index === 0
                       ? t("report.notice.levelPrefix", { level: reliabilityLabel(t, report.reliability) })
                       : t("report.notice.caution")}

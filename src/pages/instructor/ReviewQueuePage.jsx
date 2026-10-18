@@ -51,7 +51,7 @@ export default function ReviewQueuePage() {
     <InstructorShell>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="title-display text-3xl">{t("instructor.queue.title")}</h1>
-        <label className="ml-auto flex items-center gap-2 text-sm text-slate-600">
+        <label className="ml-auto flex items-center gap-2 text-sm text-grey-600">
           {t("instructor.queue.cohort")}
           <select
             value={cohortId}
@@ -93,7 +93,7 @@ export default function ReviewQueuePage() {
           <LoadError message={error} onRetry={load} />
         </div>
       ) : !data ? (
-        <p className="py-16 text-center text-sm text-slate-500">{t("instructor.queue.loading")}</p>
+        <p className="py-16 text-center text-sm text-grey-500">{t("instructor.queue.loading")}</p>
       ) : (
         <section className="surface-card mt-4 p-6">
           {data.items.length ? (
@@ -113,22 +113,22 @@ export default function ReviewQueuePage() {
                 </thead>
                 <tbody>
                   {data.items.map((i) => (
-                    <tr key={i.sessionId} className="border-b border-slate-100 hover:bg-paper">
+                    <tr key={i.sessionId} className="border-b border-grey-100 hover:bg-paper">
                       <td className="py-3 pr-4">
                         <Link to={`/instructor/students/${i.studentId}`} className="font-semibold text-ink hover:underline">
                           {i.studentName}
                         </Link>
-                        <p className="text-xs text-slate-500">{i.cohortName}</p>
+                        <p className="text-xs text-grey-500">{i.cohortName}</p>
                       </td>
-                      <td className="py-3 pr-4 text-slate-800">{taskName(t, i.taskName)}</td>
-                      <td className="py-3 pr-4 text-slate-700">{formatDate(i.recordedAt)}</td>
+                      <td className="py-3 pr-4 text-grey-800">{taskName(t, i.taskName)}</td>
+                      <td className="py-3 pr-4 text-grey-700">{formatDate(i.recordedAt)}</td>
                       <td className="py-3 pr-4 tabular-nums">
                         <span className="font-semibold">{i.aiScore}</span>
                         {i.finalScore != null && i.finalScore !== i.aiScore ? (
-                          <span className="text-slate-500"> → {i.finalScore}</span>
+                          <span className="text-grey-500"> → {i.finalScore}</span>
                         ) : null}
                       </td>
-                      <td className="py-3 pr-4 text-xs text-slate-600">
+                      <td className="py-3 pr-4 text-xs text-grey-600">
                         {t("instructor.counts.issues", { count: i.issueCount })} ·{" "}
                         {t("instructor.queue.confidence", {
                           level: reliabilityLabel(t, (i.reliability ?? "—").replace(" Confidence", "")),
@@ -151,10 +151,10 @@ export default function ReviewQueuePage() {
               </table>
             </div>
           ) : (
-            <p className="py-10 text-center text-sm text-slate-600">{t(`instructor.queue.empty.${filter}`)}</p>
+            <p className="py-10 text-center text-sm text-grey-600">{t(`instructor.queue.empty.${filter}`)}</p>
           )}
           {filter !== "completed" && data.items.length ? (
-            <p className="mt-3 text-xs text-slate-500">{t("instructor.queue.oldestFirst")}</p>
+            <p className="mt-3 text-xs text-grey-500">{t("instructor.queue.oldestFirst")}</p>
           ) : null}
         </section>
       )}
