@@ -11,6 +11,17 @@ export default defineConfig({
       "@": srcDir,
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Vendor code changes rarely, so it caches across app deploys.
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          motion: ["motion/react"],
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       // FastAPI backend (server/); same-origin in the browser so the session cookie just works.
