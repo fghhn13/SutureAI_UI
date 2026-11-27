@@ -57,6 +57,10 @@ export default {
     demoAccounts: "演示账号",
     demoPassword: "（密码 {password}）",
     footer: "学生和教师均从此处登录。",
+    brand: {
+      tagline: "AI 驱动的外科缝合技能评估",
+      points: ["记录每一针的操作", "客观、可解释的评分", "可回放的逐项反馈"],
+    },
     demoNotes: {
       chen: "教师 · A、B 班",
       patel: "教师 · B 班",
@@ -90,6 +94,7 @@ export default {
     },
     currentTask: {
       title: "当前训练任务",
+      detailsTitle: "任务详情",
       subtitle: "本课程中你下一步需要完成的任务。",
       task: "任务",
       status: "状态",
@@ -536,6 +541,8 @@ export default {
       pending: "待教师评审",
       reviewedBy: "{name} 已评审",
       pendingShort: "待教师评审",
+      stampReviewed: "已评审",
+      stampPending: "待教师评审",
     },
     overall: {
       title: "总体表现",

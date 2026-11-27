@@ -100,29 +100,29 @@ created → uploaded → scoring → scored → generating → ready
 
 ## API
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/auth/login` · `/api/auth/logout` | 登录 / 登出 |
-| GET | `/api/auth/me` | 当前用户 |
-| GET | `/api/tasks` | 任务列表 |
-| POST | `/api/sessions` | 创建训练会话 `{ taskId }` |
-| GET | `/api/sessions` · `/api/sessions/:id` | 我的会话 / 单个会话状态 |
-| POST | `/api/sessions/:id/video` | 上传视频（multipart：`file`，可选 `durationSeconds`） |
-| GET | `/api/sessions/:id/video` | 视频流（支持 Range，可拖动进度） |
-| POST | `/api/sessions/:id/retry` | 重试失败的会话 |
-| GET | `/api/reports` | 我的报告列表；教师可传 `?studentId=` 查看所带学生的 |
-| GET | `/api/reports/:sessionId` | 报告内容（按查看者合并评审、反馈、笔记） |
-| PUT | `/api/reports/:sessionId/review` | 教师：保存草稿或完成评审 `{ finalScore, comment, teachingFocus, complete }` |
-| POST | `/api/reports/:sessionId/accept` | 学生：接受报告 `{ message? }`（有未处理的申诉时不能接受） |
-| POST | `/api/reports/:sessionId/appeals` | 学生：提出申诉 `{ eventId?, reason: misdetected\|occluded\|timing\|other, message }`；不传 `eventId` 表示对整份报告申诉；每份报告最多 5 条 |
-| DELETE | `/api/reports/:sessionId/appeals/:id` | 学生：撤回尚未处理的申诉 |
-| POST | `/api/reports/:sessionId/appeals/:id/decision` | 教师：`{ decision: accept\|reject, note, scoreAdjustment? }`；采纳后撤销该判定并调整分数（已完成的评审也会同步调整） |
-| PUT | `/api/reports/:sessionId/note` | 学生：私人笔记 `{ note }` |
-| GET | `/api/dashboard` | 学生主页聚合数据 |
-| GET | `/api/instructor/cohorts` | 教师所带班级 |
-| GET | `/api/instructor/cohorts/:id` | 班级总览：KPI、需要关注、热力图、学生名单 |
-| GET | `/api/instructor/students/:id` | 学生详情：统计、分数序列、各维度序列、训练记录、日历 |
-| GET | `/api/instructor/reviews` | 评审队列 `?filter=pending\|appeals\|completed&cohortId=` |
+| 方法     | 路径                                             | 说明                                                                                                              |
+| ------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/auth/login` · `/api/auth/logout`         | 登录 / 登出                                                                                                         |
+| GET    | `/api/auth/me`                                 | 当前用户                                                                                                            |
+| GET    | `/api/tasks`                                   | 任务列表                                                                                                            |
+| POST   | `/api/sessions`                                | 创建训练会话 `{ taskId }`                                                                                             |
+| GET    | `/api/sessions` · `/api/sessions/:id`          | 我的会话 / 单个会话状态                                                                                                   |
+| POST   | `/api/sessions/:id/video`                      | 上传视频（multipart：`file`，可选 `durationSeconds`）                                                                     |
+| GET    | `/api/sessions/:id/video`                      | 视频流（支持 Range，可拖动进度）                                                                                             |
+| POST   | `/api/sessions/:id/retry`                      | 重试失败的会话                                                                                                         |
+| GET    | `/api/reports`                                 | 我的报告列表；教师可传 `?studentId=` 查看所带学生的                                                                               |
+| GET    | `/api/reports/:sessionId`                      | 报告内容（按查看者合并评审、反馈、笔记）                                                                                            |
+| PUT    | `/api/reports/:sessionId/review`               | 教师：保存草稿或完成评审 `{ finalScore, comment, teachingFocus, complete }`                                                 |
+| POST   | `/api/reports/:sessionId/accept`               | 学生：接受报告 `{ message? }`（有未处理的申诉时不能接受）                                                                            |
+| POST   | `/api/reports/:sessionId/appeals`              | 学生：提出申诉 `{ eventId?, reason: misdetected\|occluded\|timing\|other, message }`；不传 `eventId` 表示对整份报告申诉；每份报告最多 5 条 |
+| DELETE | `/api/reports/:sessionId/appeals/:id`          | 学生：撤回尚未处理的申诉                                                                                                    |
+| POST   | `/api/reports/:sessionId/appeals/:id/decision` | 教师：`{ decision: accept\|reject, note, scoreAdjustment? }`；采纳后撤销该判定并调整分数（已完成的评审也会同步调整）                           |
+| PUT    | `/api/reports/:sessionId/note`                 | 学生：私人笔记 `{ note }`                                                                                              |
+| GET    | `/api/dashboard`                               | 学生主页聚合数据                                                                                                        |
+| GET    | `/api/instructor/cohorts`                      | 教师所带班级                                                                                                          |
+| GET    | `/api/instructor/cohorts/:id`                  | 班级总览：KPI、需要关注、热力图、学生名单                                                                                          |
+| GET    | `/api/instructor/students/:id`                 | 学生详情：统计、分数序列、各维度序列、训练记录、日历                                                                                      |
+| GET    | `/api/instructor/reviews`                      | 评审队列 `?filter=pending\|appeals\|completed&cohortId=`                                                            |
 
 后端运行时可在 http://127.0.0.1:8000/docs 查看自动生成的 OpenAPI 文档。
 

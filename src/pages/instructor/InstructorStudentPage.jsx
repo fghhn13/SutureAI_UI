@@ -44,7 +44,7 @@ export default function InstructorStudentPage() {
   if (!d) {
     return (
       <InstructorShell>
-        <p className="py-16 text-center text-sm text-slate-500">{t("instructor.student.loading")}</p>
+        <p className="py-16 text-center text-sm text-grey-500">{t("instructor.student.loading")}</p>
       </InstructorShell>
     );
   }
@@ -70,31 +70,32 @@ export default function InstructorStudentPage() {
         ← {student.cohort ? student.cohort.name : t("instructor.student.overview")}
       </Link>
 
-      <header className="surface-card mt-3 p-6">
+      <header className="surface-card relative mt-3 overflow-hidden p-6">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-brand-500" />
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{student.name}</h1>
-            <p className="text-sm text-slate-500">{student.email}</p>
-            <p className="mt-2 text-sm text-slate-700">
+            <h1 className="title-display text-3xl">{student.name}</h1>
+            <p className="text-sm text-grey-500">{student.email}</p>
+            <p className="mt-2 text-sm text-grey-700">
               {student.cohort ? `${student.cohort.name} · ${student.cohort.courseName}` : t("instructor.student.noCohort")}
             </p>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-grey-600">
               {t("instructor.student.currentTask")}{" "}
-              <span className="font-medium text-slate-800">{taskName(t, student.currentTask)}</span> ·{" "}
+              <span className="font-medium text-grey-800">{taskName(t, student.currentTask)}</span> ·{" "}
               {t("instructor.student.focus")}{" "}
-              <span className="font-medium text-slate-800">{student.trainingFocus ?? "—"}</span>
+              <span className="font-medium text-grey-800">{student.trainingFocus ?? "—"}</span>
             </p>
           </div>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-grey-600">
             {t("instructor.student.lastActive", { when: relativeDays(t, stats.daysSinceActive) })}
           </p>
         </div>
         {d.attention.length ? (
           <ul className="mt-4 flex flex-wrap gap-2">
             {d.attention.map((a, i) => (
-              <li key={i} className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-sm">
+              <li key={i} className="flex items-center gap-2 border-b border-line py-2 text-sm last:border-0">
                 <SeverityBadge severity={a.severity} />
-                <span className="text-slate-700">{attentionText(t, a)}</span>
+                <span className="text-grey-700">{attentionText(t, a)}</span>
                 {a.sessionId ? (
                   <Link to={reportLink(a.sessionId)} className="link-brand text-xs">
                     {t("instructor.student.open")}
@@ -135,21 +136,21 @@ export default function InstructorStudentPage() {
       </div>
 
       <section className="surface-card mt-6 p-6">
-        <h2 className="text-lg font-semibold text-slate-900">{t("instructor.student.scoreTitle")}</h2>
-        <p className="text-sm text-slate-600">{t("instructor.student.scoreSubtitle")}</p>
+        <h2 className="section-title">{t("instructor.student.scoreTitle")}</h2>
+        <p className="text-sm text-grey-600">{t("instructor.student.scoreSubtitle")}</p>
         <div className="mt-4">
           {series.length ? (
             <LineChart points={series} ariaLabel={t("instructor.student.scoreAria", { name: student.name })} onSelect={openReport} />
           ) : (
-            <p className="py-10 text-center text-sm text-slate-500">{t("instructor.student.noReportsYet")}</p>
+            <p className="py-10 text-center text-sm text-grey-500">{t("instructor.student.noReportsYet")}</p>
           )}
         </div>
       </section>
 
       {series.length ? (
         <section className="surface-card mt-6 p-6">
-          <h2 className="text-lg font-semibold text-slate-900">{t("instructor.student.dimsTitle")}</h2>
-          <p className="text-sm text-slate-600">{t("instructor.student.dimsSubtitle")}</p>
+          <h2 className="section-title">{t("instructor.student.dimsTitle")}</h2>
+          <p className="text-sm text-grey-600">{t("instructor.student.dimsSubtitle")}</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {d.dimensions.map((dim) => {
               const pts = d.scoreSeries
@@ -163,9 +164,9 @@ export default function InstructorStudentPage() {
               const avg = stats.dimensionAverages[dim];
               const dimLabel = dimensionName(t, dim);
               return (
-                <div key={dim} className="rounded-xl border border-slate-100 p-3">
-                  <p className="text-sm font-semibold text-slate-800">{dimLabel}</p>
-                  <p className="text-xs text-slate-500">
+                <div key={dim} className="rounded-md border border-line p-3">
+                  <p className="text-sm font-semibold text-grey-800">{dimLabel}</p>
+                  <p className="text-xs text-grey-500">
                     {t("instructor.student.recentAvg", { value: avg != null ? Math.round(avg) : "—" })}
                   </p>
                   {pts.length ? (
@@ -178,7 +179,7 @@ export default function InstructorStudentPage() {
                       onSelect={openReport}
                     />
                   ) : (
-                    <p className="py-6 text-center text-xs text-slate-400">{t("instructor.student.noData")}</p>
+                    <p className="py-6 text-center text-xs text-grey-400">{t("instructor.student.noData")}</p>
                   )}
                 </div>
               );
@@ -188,11 +189,11 @@ export default function InstructorStudentPage() {
       ) : null}
 
       <section className="surface-card mt-6 p-6">
-        <h2 className="text-lg font-semibold text-slate-900">{t("instructor.student.sessionsTitle")}</h2>
+        <h2 className="section-title">{t("instructor.student.sessionsTitle")}</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-mist text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
                 <th className="pb-3 pr-4">{t("instructor.student.columns.date")}</th>
                 <th className="pb-3 pr-4">{t("instructor.student.columns.task")}</th>
                 <th className="pb-3 pr-4">{t("instructor.student.columns.score")}</th>
@@ -203,17 +204,17 @@ export default function InstructorStudentPage() {
             </thead>
             <tbody>
               {d.sessions.map((s) => (
-                <tr key={s.sessionId} className="border-b border-slate-100 hover:bg-brand-50/50">
-                  <td className="py-3 pr-4 text-slate-700">{formatDate(s.recordedAt)}</td>
-                  <td className="py-3 pr-4 font-medium text-slate-900">{taskName(t, s.taskName)}</td>
+                <tr key={s.sessionId} className="border-b border-grey-100 hover:bg-paper">
+                  <td className="py-3 pr-4 text-grey-700">{formatDate(s.recordedAt)}</td>
+                  <td className="py-3 pr-4 font-medium text-ink">{taskName(t, s.taskName)}</td>
                   <td className="py-3 pr-4 tabular-nums">
                     {s.score == null ? (
-                      <span className="text-xs text-slate-500" title={s.error ?? undefined}>
+                      <span className="text-xs text-grey-500" title={s.error ?? undefined}>
                         {statusLabel(t, s.status)}
                       </span>
                     ) : s.finalScore != null && s.finalScore !== s.score ? (
                       <span>
-                        <span className="text-slate-400 line-through">{s.score}</span>{" "}
+                        <span className="text-grey-400 line-through">{s.score}</span>{" "}
                         <span className="font-semibold">{s.finalScore}</span>
                       </span>
                     ) : (
@@ -235,7 +236,7 @@ export default function InstructorStudentPage() {
               ))}
             </tbody>
           </table>
-          {!d.sessions.length ? <p className="py-6 text-center text-sm text-slate-500">{t("instructor.student.noSessions")}</p> : null}
+          {!d.sessions.length ? <p className="py-6 text-center text-sm text-grey-500">{t("instructor.student.noSessions")}</p> : null}
         </div>
       </section>
 

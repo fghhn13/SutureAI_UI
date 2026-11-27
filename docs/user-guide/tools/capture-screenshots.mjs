@@ -10,6 +10,7 @@
  * built-in WebSocket — no extra packages.
  *
  * Env: BROWSER (path to chrome/msedge), DEBUG_PORT (default 9333).
+ * The demo recording is matched by its filename (suture_1.mp4) or its registered hash.
  */
 
 import { spawn } from "node:child_process";
@@ -159,7 +160,23 @@ async function goto(cdp, path, waitForExpr) {
     document.head.append(s);
     return true;
   })()`);
-  await sleep(600); // let entrance animations settle
+  await settle(cdp);
+}
+
+/**
+ * Sections fade in, count up and draw themselves the first time they scroll into view
+ * (Reveal / Stagger / CountUp), so off-screen content would be captured blank. Scroll through
+ * the whole page once, back to the top, and wait for the longest animation (the stitched
+ * incision, ~2.5 s) to finish.
+ */
+async function settle(cdp) {
+  const height = await cdp.eval("document.documentElement.scrollHeight");
+  for (let y = 0; y < height; y += HEIGHT / 2) {
+    await cdp.eval(`scrollTo(0, ${y})`);
+    await sleep(150);
+  }
+  await cdp.eval("scrollTo(0, 0)");
+  await sleep(2800);
 }
 
 async function waitFor(cdp, expr, timeoutMs = 20000) {
@@ -275,8 +292,8 @@ const SYNTHETIC_UPLOAD_JS = `(async () => {
 })()`;
 
 const timelineItemJs = (title) => `(() => {
-  const h = [...document.querySelectorAll("h4")].find(e => e.textContent === ${JSON.stringify(title)});
-  return h ? h.closest(".rounded-xl") : null;
+  const h = [...document.querySelectorAll("h4")].find(e => e.textContent.trim() === ${JSON.stringify(title)});
+  return h ? h.closest(".rounded-md") : null;
 })()`;
 
 async function main() {
@@ -325,7 +342,8 @@ async function main() {
       [...card.querySelectorAll("div")].filter(d => /^Demo accounts/.test(d.textContent.trim())).forEach(d => d.remove());
       return true;
     })()`);
-    await shot(cdp, "01-login", [`document.querySelector("main")`], 0);
+    // Brand panel and sign-in card, without the empty paper above and below.
+    await shot(cdp, "01-login", [`document.querySelector("main").children[0]`, `document.querySelector("main").children[1]`], 32);
 
     // ---- Student: dashboard, upload, progress
     await login(cdp, "alex@demo.local");
@@ -363,11 +381,13 @@ async function main() {
     // ---- Instructor
     await login(cdp, "chen@demo.local");
     await goto(cdp, "/instructor?cohort=group-a", hasText("Needs attention"));
+    // The instructor shell's top bar (Overview / Review queue) is part of what the guide describes.
     await shot(cdp, "08-instructor-overview", [
+      `document.querySelector("#root header")`,
       `document.querySelector("main > div")`,
       sectionJs("Needs attention", "section"),
       sectionJs("Skill map", "section"),
-    ]);
+    ], 8); // small pad: the Students card starts just below
     await shot(cdp, "09-instructor-roster", [sectionJs("Students", "section")]);
 
     const overview = await api(cdp, "/instructor/cohorts/group-a");
@@ -381,7 +401,7 @@ async function main() {
     ]);
 
     await goto(cdp, "/instructor/reviews?filter=appeals", hasText("Oldest first"));
-    await shot(cdp, "11-review-queue", [`document.querySelector("main")`], 0);
+    await shot(cdp, "11-review-queue", [`document.querySelector("#root header")`, `document.querySelector("main")`], 0);
 
     let target = null;
     for (const r of await api(cdp, `/reports?studentId=${priya.id}`)) {
@@ -424,7 +444,7 @@ async function main() {
     await cdp.eval(`(() => {
       const item = ${timelineItemJs(flagged.title)};
       item.scrollIntoView({ block: "center" });
-      [...item.querySelectorAll("button")].find(b => b.textContent === "Appeal").click();
+      [...item.querySelectorAll("button")].find(b => b.textContent.trim() === "Appeal").click();
       return true;
     })()`);
     await sleep(300);
@@ -445,10 +465,12 @@ async function main() {
       `[...document.querySelectorAll("button")].some(b => b.textContent === "Save as PDF" && !b.disabled)`,
     );
     await sleep(500);
-    await shot(cdp, "15-export-pdf", [
-      `document.querySelector("article header")`,
-      `document.querySelectorAll("article table")[1].querySelectorAll("tr")[3]`,
-    ]);
+    // From the header down to the third timeline event, so the video stills show.
+    const printTimelineRowJs = (n) => `(() => {
+      const h = [...document.querySelectorAll("article h2")].find(e => e.textContent.trim().toLowerCase() === "timeline");
+      return h ? h.closest("section").querySelectorAll("tr")[${n}] : null;
+    })()`;
+    await shot(cdp, "15-export-pdf", [`document.querySelector("article header")`, printTimelineRowJs(2)]);
 
     console.log(`Done → ${OUT}`);
   } finally {

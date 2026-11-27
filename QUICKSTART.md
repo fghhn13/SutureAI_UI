@@ -79,12 +79,12 @@ npm run dev
 
 ## 常用命令
 
-| 命令 | 说明 |
-|------|------|
-| `.\server\.venv\Scripts\python -m pytest server` | 后端测试 |
-| `npm run demo:reset` | 清空数据库和上传的视频，重新写入演示数据 |
-| `npm run demo:register -- <视频>` | 把一个视频文件登记为演示视频（见 [docs/demo-script.md](docs/demo-script.md)） |
-| `npm run build` | 前端生产构建，输出到 `dist/` |
+| 命令                                               | 说明                                                           |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| `.\server\.venv\Scripts\python -m pytest server` | 后端测试                                                         |
+| `npm run demo:reset`                             | 清空数据库和上传的视频，重新写入演示数据                                         |
+| `npm run demo:register -- <视频>`                  | 把一个视频文件登记为演示视频（见 [docs/demo-script.md](docs/demo-script.md)） |
+| `npm run build`                                  | 前端生产构建，输出到 `dist/`                                           |
 
 API 文档：后端运行时访问 http://127.0.0.1:8000/docs 。
 
