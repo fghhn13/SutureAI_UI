@@ -670,7 +670,6 @@ function TrainingReportPage() {
   const [timelineSectionOpen, setTimelineSectionOpen] = useState(true);
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [videoDuration, setVideoDuration] = useState(null);
-  const [viewMode, setViewMode] = useState(isStaff ? "instructor" : "student");
   const evidenceVideoRef = useRef(null);
 
   const loadCatalog = useCallback(() => {
@@ -1024,37 +1023,6 @@ function TrainingReportPage() {
             {t("report.exportPdf")}
           </button>
           <LanguageSwitch />
-          {isStaff ? (
-            <div className="flex items-center gap-2">
-              <span className="eyebrow">{t("report.view")}</span>
-              {/* Segmented control; the active pill slides between options. */}
-              <div className="relative flex rounded-md border border-line bg-paper p-0.5">
-                {[
-                  ["instructor", t("report.viewModes.instructor")],
-                  ["student", t("report.viewModes.student")],
-                ].map(([mode, label]) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setViewMode(mode)}
-                    aria-pressed={viewMode === mode}
-                    className={`relative rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                      viewMode === mode ? "text-white" : "text-ink-soft hover:text-brand-700"
-                    }`}
-                  >
-                    {viewMode === mode ? (
-                      <motion.span
-                        layoutId="view-mode-pill"
-                        className="absolute inset-0 rounded bg-brand-500"
-                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                      />
-                    ) : null}
-                    <span className="relative">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </div>
       </Reveal>
 
@@ -1288,7 +1256,7 @@ function TrainingReportPage() {
         </div>
       </Reveal>
 
-      {isStaff && viewMode === "instructor" ? (
+      {isStaff ? (
         <InstructorReportFeedbackSection
           data={report}
           onUpdated={setReport}
