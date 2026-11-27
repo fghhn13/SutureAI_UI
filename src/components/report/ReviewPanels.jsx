@@ -34,7 +34,7 @@ function useAction() {
 
 function ErrorLine({ error }) {
   return error ? (
-    <p className="mt-2 text-sm text-rose-700" role="alert">
+    <p className="mt-2 text-sm text-bad-700" role="alert">
       {error}
     </p>
   ) : null;
@@ -77,7 +77,7 @@ function FocusChips({ value, onChange, suggestions }) {
         {suggestions
           .filter((s) => !value.includes(s))
           .map((s) => (
-            <button key={s} type="button" onClick={() => add(s)} className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:border-brand-300 hover:text-brand-700">
+            <button key={s} type="button" onClick={() => add(s)} className="rounded-full border border-dashed border-grey-300 px-2 py-0.5 text-xs text-grey-600 hover:border-brand-300 hover:text-brand-700">
               + {s}
             </button>
           ))}
@@ -141,7 +141,7 @@ export function InstructorReviewPanel({ report, onUpdated }) {
     <article className="rounded-md border border-line bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="pill-header">{t("report.instructorReview")}</h3>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-grey-500">
           {completed
             ? t("report.review.sentBy", { date: fmt(review.completedAt), name: review.instructorName })
             : review
@@ -152,11 +152,11 @@ export function InstructorReviewPanel({ report, onUpdated }) {
 
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <div className="rounded-md bg-paper px-3 py-2">
-          <p className="text-xs text-slate-500">{t("report.aiScore")}</p>
-          <p className="text-2xl font-semibold text-slate-900">{ai}</p>
+          <p className="text-xs text-grey-500">{t("report.aiScore")}</p>
+          <p className="text-2xl font-semibold text-grey-900">{ai}</p>
         </div>
         <label className="text-sm">
-          <span className="text-xs text-slate-500">{t("report.finalScore")}</span>
+          <span className="text-xs text-grey-500">{t("report.finalScore")}</span>
           <input
             type="number"
             min={0}
@@ -167,15 +167,15 @@ export function InstructorReviewPanel({ report, onUpdated }) {
           />
         </label>
         <div className="rounded-md bg-paper px-3 py-2">
-          <p className="text-xs text-slate-500">{t("report.review.alignment")}</p>
-          <p className="mt-1 text-sm font-semibold text-slate-800">
+          <p className="text-xs text-grey-500">{t("report.review.alignment")}</p>
+          <p className="mt-1 text-sm font-semibold text-grey-800">
             {scoreValid ? t(`report.review.alignmentValues.${alignmentOf(ai, finalScore)}`) : "—"}
           </p>
         </div>
       </div>
 
       <label className="mt-4 block text-sm">
-        <span className="font-medium text-slate-700">{t("report.review.commentLabel")}</span>
+        <span className="font-medium text-grey-700">{t("report.review.commentLabel")}</span>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
@@ -185,7 +185,7 @@ export function InstructorReviewPanel({ report, onUpdated }) {
       </label>
 
       <div className="mt-4">
-        <p className="text-sm font-medium text-slate-700">{t("report.teachingFocus")}</p>
+        <p className="text-sm font-medium text-grey-700">{t("report.teachingFocus")}</p>
         <div className="mt-2">
           <FocusChips value={focus} onChange={setFocus} suggestions={suggestions} />
         </div>
@@ -200,8 +200,8 @@ export function InstructorReviewPanel({ report, onUpdated }) {
         <button type="button" disabled={busy || !scoreValid} onClick={() => save(true)} className="btn-primary px-4 py-2">
           {completed ? t("report.review.updateReview") : t("report.completeReview")}
         </button>
-        {!scoreValid ? <span className="text-sm text-rose-700">{t("report.review.scoreRange")}</span> : null}
-        {savedMsg ? <span className="text-sm text-emerald-700">{t(`report.review.${savedMsg}`)}</span> : null}
+        {!scoreValid ? <span className="text-sm text-bad-700">{t("report.review.scoreRange")}</span> : null}
+        {savedMsg ? <span className="text-sm text-good-700">{t(`report.review.${savedMsg}`)}</span> : null}
       </div>
       <ErrorLine error={error} />
     </article>
@@ -227,9 +227,9 @@ export function AppealBadge({ status, adjustment }) {
   const { t } = useI18n();
   const accepted = t("report.appealAccepted");
   const styles = {
-    open: ["border-amber-200 bg-amber-50 text-amber-900", "●", t("report.appealPending")],
+    open: ["border-warn-200 bg-warn-50 text-warn-900", "●", t("report.appealPending")],
     accepted: [
-      "border-emerald-200 bg-emerald-50 text-emerald-800",
+      "border-good-200 bg-good-50 text-good-800",
       "✓",
       adjustment
         ? t("report.appeals.acceptedWithAdjustment", {
@@ -238,7 +238,7 @@ export function AppealBadge({ status, adjustment }) {
           })
         : accepted,
     ],
-    rejected: ["border-slate-300 bg-slate-50 text-slate-700", "✕", t("report.appealRejected")],
+    rejected: ["border-grey-300 bg-grey-50 text-grey-700", "✕", t("report.appealRejected")],
   };
   const [cls, icon, text] = styles[status] ?? styles.open;
   return (
@@ -268,7 +268,7 @@ export function AppealForm({ report, eventId, onUpdated, onCancel }) {
 
   return (
     <div className="mt-3 border-l-2 border-warn bg-paper p-3 text-sm">
-      <p className="font-semibold text-slate-800">
+      <p className="font-semibold text-grey-800">
         {eventId ? t("report.appealFinding") : t("report.appeals.appealWhole")}
       </p>
       <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label={t("report.appealReason")}>
@@ -282,7 +282,7 @@ export function AppealForm({ report, eventId, onUpdated, onCancel }) {
             className={`rounded-full border px-3 py-1 text-xs font-semibold ${
               reason === r.value
                 ? "border-brand-500 bg-brand-600 text-white"
-                : "border-slate-300 bg-white text-slate-700 hover:border-brand-300"
+                : "border-grey-300 bg-white text-grey-700 hover:border-brand-300"
             }`}
           >
             {t(`report.appeals.reasons.${r.value}`, { defaultValue: r.label })}
@@ -321,14 +321,14 @@ export function AppealsPanel({ report, onUpdated, onSeek }) {
     <article className="tile p-5">
       <h3 className="pill-header">{t("report.appeals.panelTitle")}</h3>
       {fb?.kind === "accept" ? (
-        <p className="mt-3 text-sm text-slate-700">
-          <span className="font-semibold text-emerald-700">{t("report.appeals.acceptedBadge")}</span>
+        <p className="mt-3 text-sm text-grey-700">
+          <span className="font-semibold text-good-700">{t("report.appeals.acceptedBadge")}</span>
           {t("report.appeals.acceptedOn", { date: fmt(fb.createdAt) })}
-          {fb.message ? <span className="mt-1 block text-slate-600">“{fb.message}”</span> : null}
+          {fb.message ? <span className="mt-1 block text-grey-600">“{fb.message}”</span> : null}
         </p>
       ) : null}
       {!appeals.length && !fb ? (
-        <p className="mt-3 text-sm text-slate-600">{t("report.appeals.noResponse")}</p>
+        <p className="mt-3 text-sm text-grey-600">{t("report.appeals.noResponse")}</p>
       ) : null}
       <ul className="mt-3 space-y-3">
         {appeals.map((a) => (
@@ -370,13 +370,13 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
             ▶ {clock(a.eventTime)}
           </button>
         ) : null}
-        <span className="font-semibold text-slate-900">{a.eventLabel ?? t("report.appeals.wholeReport")}</span>
+        <span className="font-semibold text-grey-900">{a.eventLabel ?? t("report.appeals.wholeReport")}</span>
         <AppealBadge status={a.status} adjustment={a.scoreAdjustment} />
       </div>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-grey-500">
         {t(`report.appeals.reasons.${a.reason}`, { defaultValue: a.reason })} · {fmt(a.createdAt)}
       </p>
-      <blockquote className="mt-2 rounded-md border-l-4 border-slate-300 bg-slate-50 px-3 py-2 text-slate-800">
+      <blockquote className="mt-2 rounded-md border-l-4 border-grey-300 bg-grey-50 px-3 py-2 text-grey-800">
         {a.message}
       </blockquote>
 
@@ -391,7 +391,7 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
             ))}
           </div>
           {decision === "accept" ? (
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-grey-700">
               {t("report.appeals.scoreAdjustment")}
               <input
                 type="number"
@@ -399,9 +399,9 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
                 max={20}
                 value={Number.isNaN(adjustment) ? "" : adjustment}
                 onChange={(e) => setAdjustment(e.target.value === "" ? NaN : Number(e.target.value))}
-                className="w-20 rounded-md border border-slate-300 px-2 py-1"
+                className="w-20 rounded-md border border-grey-300 px-2 py-1"
               />
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-grey-500">
                 {t("report.appeals.suggested", {
                   value: `${a.suggestedAdjustment >= 0 ? "+" : ""}${a.suggestedAdjustment}`,
                 })}
@@ -428,7 +428,7 @@ function AppealDecisionItem({ report, appeal: a, onUpdated, onSeek }) {
           <p className="text-xs text-brand-700">
             {a.decidedBy} · {fmt(a.decidedAt)}
           </p>
-          <p className="mt-1 text-slate-800">{a.decisionNote}</p>
+          <p className="mt-1 text-grey-800">{a.decisionNote}</p>
         </div>
       )}
       <ErrorLine error={error} />
@@ -444,16 +444,16 @@ export function ReviewResultCard({ review }) {
     <article className="tile-blue p-5">
       <h3 className="pill-header">{t("report.evaluation.title")}</h3>
       {review ? (
-        <div className="mt-3 space-y-2 text-sm text-slate-700">
+        <div className="mt-3 space-y-2 text-sm text-grey-700">
           <p>
-            <span className="font-medium text-slate-900">{review.instructorName}</span>
-            <span className="text-xs text-slate-500"> · {fmt(review.completedAt)}</span>
+            <span className="font-medium text-grey-900">{review.instructorName}</span>
+            <span className="text-xs text-grey-500"> · {fmt(review.completedAt)}</span>
           </p>
           <p>
             {t("report.evaluation.finalScore")}
-            <span className="text-xl font-semibold text-slate-900">{review.finalScore}</span>
+            <span className="text-xl font-semibold text-grey-900">{review.finalScore}</span>
             {review.finalScore !== review.aiScore ? (
-              <span className="text-slate-500">{t("report.evaluation.aiSuffix", { score: review.aiScore })}</span>
+              <span className="text-grey-500">{t("report.evaluation.aiSuffix", { score: review.aiScore })}</span>
             ) : null}
           </p>
           {review.comment ? <p className="border-b border-brand-100 py-2 leading-6 last:border-0">{review.comment}</p> : null}
@@ -468,7 +468,7 @@ export function ReviewResultCard({ review }) {
           ) : null}
         </div>
       ) : (
-        <p className="mt-3 text-sm italic text-slate-500">{t("report.evaluation.notYet")}</p>
+        <p className="mt-3 text-sm italic text-grey-500">{t("report.evaluation.notYet")}</p>
       )}
     </article>
   );
@@ -504,11 +504,11 @@ export function StudentResponseCard({ report, onUpdated }) {
 
       {fb?.kind === "accept" ? (
         <p className="mt-3 text-sm">
-          <span className="font-semibold text-emerald-700">{t("report.response.youAccepted")}</span>{" "}
-          <span className="text-xs text-slate-500">{fmt(fb.createdAt)}</span>
+          <span className="font-semibold text-good-700">{t("report.response.youAccepted")}</span>{" "}
+          <span className="text-xs text-grey-500">{fmt(fb.createdAt)}</span>
         </p>
       ) : (
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+        <p className="mt-2 text-sm leading-6 text-grey-600">
           {t("report.response.intro.before")}
           <strong>{t("report.response.intro.strong")}</strong>
           {t("report.response.intro.after")}
@@ -523,10 +523,10 @@ export function StudentResponseCard({ report, onUpdated }) {
                 {a.eventTime != null ? (
                   <span className="text-xs font-semibold text-brand-700">{clock(a.eventTime)}</span>
                 ) : null}
-                <span className="font-medium text-slate-900">{a.eventLabel ?? t("report.appeals.wholeReport")}</span>
+                <span className="font-medium text-grey-900">{a.eventLabel ?? t("report.appeals.wholeReport")}</span>
                 <AppealBadge status={a.status} adjustment={a.scoreAdjustment} />
               </div>
-              <p className="mt-1 text-slate-600">“{a.message}”</p>
+              <p className="mt-1 text-grey-600">“{a.message}”</p>
               {a.status === "open" ? (
                 <button type="button" disabled={busy} onClick={() => withdraw(a.id)} className="link-brand mt-1 text-xs">
                   {t("report.response.withdraw")}
@@ -536,7 +536,7 @@ export function StudentResponseCard({ report, onUpdated }) {
                   <p className="text-xs text-brand-700">
                     {a.decidedBy} · {fmt(a.decidedAt)}
                   </p>
-                  <p className="mt-1 text-slate-800">{a.decisionNote}</p>
+                  <p className="mt-1 text-grey-800">{a.decisionNote}</p>
                 </div>
               )}
             </li>
@@ -602,7 +602,7 @@ export function PersonalNoteCard({ report, onUpdated }) {
   return (
     <article className="tile-dashed p-5">
       <h3 className="pill-header">{t("report.personalNote")}</h3>
-      <p className="mt-1 text-xs text-slate-500">{t("report.note.private")}</p>
+      <p className="mt-1 text-xs text-grey-500">{t("report.note.private")}</p>
       <textarea
         value={note}
         onChange={(e) => {
@@ -616,7 +616,7 @@ export function PersonalNoteCard({ report, onUpdated }) {
         <button type="button" disabled={busy || saved} onClick={save} className="btn-secondary px-4 py-1.5">
           {t("report.note.save")}
         </button>
-        <span className="text-xs text-slate-500">{saved ? t("report.note.saved") : t("report.note.unsaved")}</span>
+        <span className="text-xs text-grey-500">{saved ? t("report.note.saved") : t("report.note.unsaved")}</span>
       </div>
       <ErrorLine error={error} />
     </article>

@@ -141,17 +141,17 @@ export default function LineChart({
 
       {hovered ? (
         <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs shadow-md"
+          className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-md border border-grey-200 bg-white px-2.5 py-1.5 text-xs shadow-md"
           style={{ left: tipLeft, top: 0 }}
           role="status"
         >
           <p className="flex items-center gap-1.5">
             <span className="inline-block h-0.5 w-3 rounded" style={{ background: CHART.series }} />
-            <span className="text-sm font-semibold text-slate-900">{hovered.value}</span>
-            <span className="text-slate-500">{valueLabel ?? t("charts.score")}</span>
+            <span className="text-sm font-semibold text-grey-900">{hovered.value}</span>
+            <span className="text-grey-500">{valueLabel ?? t("charts.score")}</span>
           </p>
-          <p className="text-slate-600">{hovered.label}</p>
-          {hovered.detail ? <p className="text-slate-500">{hovered.detail}</p> : null}
+          <p className="text-grey-600">{hovered.label}</p>
+          {hovered.detail ? <p className="text-grey-500">{hovered.detail}</p> : null}
         </div>
       ) : null}
     </div>

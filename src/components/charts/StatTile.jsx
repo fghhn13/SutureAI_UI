@@ -23,10 +23,10 @@ export default function StatTile({ label, value, delta, deltaLabel, deltaSuffix 
             {Math.round(delta * 10) / 10}
             {deltaSuffix}
           </span>{" "}
-          <span className="text-slate-500">{deltaLabel}</span>
+          <span className="text-grey-500">{deltaLabel}</span>
         </p>
       ) : hint ? (
-        <p className="mt-1 text-xs text-slate-500">{hint}</p>
+        <p className="mt-1 text-xs text-grey-500">{hint}</p>
       ) : null}
     </>
   );

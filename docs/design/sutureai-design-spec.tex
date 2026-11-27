@@ -248,15 +248,19 @@ interpolated from brand-100 to brand-800, with white numbers from step 6 up.
 \swatch{A24E36}{bad}{Problems, points lost, failures.}
 \end{minipage}
 
-The Tailwind \code{slate}, \code{emerald}, \code{amber} and \code{rose} scales are
-\textbf{remapped} onto this palette in \code{tailwind.config.js}, so existing classes across the app
-follow it without code changes (trade-off discussed in Q1). \code{indigo} was replaced by \code{brand}.
+Each status colour is also a 50--950 scale in \code{tailwind.config.js}: \code{good-*}, \code{warn-*}
+and \code{bad-*}, with the bare name (\code{text-good}, \code{border-bad/50}) as the 600 shade. Tints
+(50--200) are for backgrounds and borders, 700+ for text on tinted or grey ground. The warm neutrals
+(paper, line, mist and the ink colours) form one scale, \code{grey-50}\ldots\code{grey-950}; for example
+\code{grey-200} is line, \code{grey-300} is mist and \code{grey-900} is ink. Tailwind's own
+\code{slate}, \code{emerald}, \code{amber} and \code{rose} are left untouched and are not used (Q1).
+\code{indigo} was replaced by \code{brand}.
 
 \subsection{Contrast}
 
 Every text colour reaches WCAG AA (4.5:1) on the surfaces it is used on. Values below are measured;
 the one shortfall found while writing this document (warn on a grey tile) has been fixed by using
-\code{amber-700} there.
+\code{warn-700} there.
 
 \smallskip
 \begin{tabularx}{\textwidth}{@{}Xrrrr@{}}
@@ -275,7 +279,7 @@ bad \hex{\#A24E36}       & 5.7  & 5.3  & 5.0  & 5.2 \\
 \bottomrule
 \end{tabularx}
 
-{\small\color{muted}$^{*}$ Not used as body text on grey tiles. Rule: on a grey tile, use brand-600+ and amber-700 for text.}
+{\small\color{muted}$^{*}$ Not used as body text on grey tiles. Rule: on a grey tile, use brand-600+ and warn-700 for text.}
 
 % ================================================================================
 \section{Typography}
@@ -462,7 +466,7 @@ All figures: 1280\,px wide, English UI, demo data, captured by \code{tools/captu
 \toprule
 \textbf{File} & \textbf{Holds} \\
 \midrule
-\code{tailwind.config.js} & Palette (brand, ink, paper, line, mist, status), remapped slate/emerald/amber/rose, fonts, shadows, keyframes. \\
+\code{tailwind.config.js} & Palette (brand, ink, paper, line, mist), the warm \code{grey} scale, status scales good/warn/bad, fonts, shadows, keyframes. \\
 \code{src/index.css} & Paper grain, sheets, tiles, labels, stamp, leaders, buttons, fields, skeleton. \\
 \code{src/components/motion/} & Reveal, Stagger, CountUp, GrowBar, shared easing. \\
 \code{src/components/icons/} & DomainIcons, IconBadge. \\
@@ -492,6 +496,9 @@ The warm palette reaches older screens because \code{slate}, \code{emerald}, \co
 \code{rose} are redefined. It works today, but the names now lie (``emerald'' is a muted sage) and a
 new contributor reaching for \code{rose-500} will not get Tailwind's rose.
 \recommend{Keep the remap for this PR; in a follow-up, rename usages to semantic tokens (\code{ink-*}, \code{good}, \code{warn}, \code{bad}) and drop the overrides.}
+\par\smallskip{\small\textbf{\color{good}Resolved.}\ The overrides are gone. Usages were renamed to
+\code{grey-*} (warm neutrals) and \code{good-*} / \code{warn-*} / \code{bad-*} (status) with the same hex
+values, so rendering is unchanged; see Colour \textrightarrow{} Status.}
 \end{question}
 
 \begin{question}{The dashboard shows the current task twice}

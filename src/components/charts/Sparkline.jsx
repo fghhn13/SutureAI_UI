@@ -9,7 +9,7 @@ import { CHART } from "./tokens.js";
 export default function Sparkline({ values, width = 96, height = 28, minSpan = 20, label }) {
   const { t } = useI18n();
   if (!values?.length) {
-    return <span className="text-xs text-slate-400">—</span>;
+    return <span className="text-xs text-grey-400">—</span>;
   }
   // Self-scaled (a sparkline shows shape), but never tighter than minSpan points so
   // small noise doesn't look like a cliff.

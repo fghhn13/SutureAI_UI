@@ -53,7 +53,7 @@ export function FocusCard({ focus, onSeek }) {
     <section className="glass-card mt-6 overflow-hidden p-6">
       <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1 rounded-l-md bg-bad" />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <IconBadge icon={Target} tone="rose" size="sm" />
+        <IconBadge icon={Target} tone="bad" size="sm" />
         <span className="chip border-bad/50 text-bad">{t("report.focus.fixFirst")}</span>
         <h2 className="font-display text-xl font-semibold text-brand-800">{focus.title}</h2>
         {focus.impact ? (
